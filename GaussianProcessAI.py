@@ -17,9 +17,10 @@ class GaussianProcessAI():
     def __init__(self, zoneLength=30, determinateSigma=1.0):
         self.zoneLength = zoneLength  # days
         self.determinateSigma = determinateSigma  # 1.5 * sigma
-        rbfKernel = 1.0 * gp.kernels.RBF(100.0)
-        noiseKernel = gp.kernels.WhiteKernel(1e-2)
-        kernel = rbfKernel + noiseKernel
+        longtermKernel = 1.0 * gp.kernels.RBF(5.0)
+        shorttermKernel = 5.0 * gp.kernels.RationalQuadratic(length_scale=0.1, alpha=0.78)
+        noiseKernel = 0.1 * gp.kernels.WhiteKernel(1e-2)
+        kernel = longtermKernel + shorttermKernel + noiseKernel
         self.model = gp.GaussianProcessClassifier(kernel=kernel, n_restarts_optimizer=9)
 
 
@@ -116,10 +117,10 @@ class GaussianProcessAI():
         _0samples = data[data.ClassLabel == 0][['BBPosition', 'RSI14']]
         _1samples = data[data.ClassLabel == 1][['BBPosition', 'RSI14']]
         _2samples = data[data.ClassLabel == 2][['BBPosition', 'RSI14']]
-        pl.scatter(_0samples['BBPosition'], _0samples['RSI14'], c='g')
-        pl.scatter(_1samples['BBPosition'], _1samples['RSI14'], c='gray', alpha=0.3)
-        pl.scatter(_2samples['BBPosition'], _2samples['RSI14'], c='r')
-        pl.show()
+        # pl.scatter(_0samples['BBPosition'], _0samples['RSI14'], c='g')
+        # pl.scatter(_1samples['BBPosition'], _1samples['RSI14'], c='gray', alpha=0.3)
+        # pl.scatter(_2samples['BBPosition'], _2samples['RSI14'], c='r')
+        # pl.show()
         # start training
         self.model.fit(trainSamples, trainLabels)
         print(f'Model: {self.model.kernel_}')
