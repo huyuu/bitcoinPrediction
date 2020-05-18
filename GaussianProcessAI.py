@@ -5,7 +5,7 @@ from sklearn import gaussian_process as gp
 import pickle
 from matplotlib import pyplot as pl
 import os
-import talib as ta
+# import talib as ta
 
 from plotGraph import plot
 
@@ -17,10 +17,9 @@ class GaussianProcessAI():
     def __init__(self, zoneLength=30, determinateSigma=1.0):
         self.zoneLength = zoneLength  # days
         self.determinateSigma = determinateSigma  # 1.5 * sigma
-        constantKernel = gp.kernels.ConstantKernel(1.0)
         rbfKernel = 1.0 * gp.kernels.RBF(100.0)
         noiseKernel = gp.kernels.WhiteKernel(1e-2)
-        kernel = constantKernel * rbfKernel + noiseKernel
+        kernel = rbfKernel + noiseKernel
         self.model = gp.GaussianProcessClassifier(kernel=kernel, n_restarts_optimizer=9)
 
 
@@ -133,7 +132,7 @@ class GaussianProcessAI():
 
 if __name__ == '__main__':
     ai = GaussianProcessAI()
-    ai.preprocessData()
+    # ai.preprocessData()
     ai.trainFromHistoryData()
 
     # ai.varifyPrediction()
