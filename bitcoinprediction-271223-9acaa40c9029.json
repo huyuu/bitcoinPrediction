@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "bitcoinprediction-271223",
+  "private_key_id": "9acaa40c9029382ee6e3d1085a29a7d806ec4953",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCxOBS2rkzaOu/o\nvbIPhz8VkLPdbNogjwNq8xNTLZPP6BpLeMbD9i4TxUigpX/Dam/cGhpdYnjOimJX\nRG4OAfFrw0ouK+tF9Eik7YQw+j2+qWx9zlHG98eX/mVfblG0lUnsBt2nu0aCSh5C\n6NNWQSxXbbH3R4ymRczS/C3wJhpbesfkJo2tH/1GntTfH9xGkOk1pFc6w21zz7GC\n/r7vsznH96DRsNi8e/kWcZ9HA3UTNNFNvHfl5LEYL+/Gd73qUQz8+HPitEk0FqpS\n725vYy1VFhtGc0CpjreLfyzMKdoijFIF4lmDdZ/QKoJO6gcES77HqCRvIn3XH2Hr\nJh2jMnNlAgMBAAECggEAARAXHkbMQm3GrRUz6Twv055i4n0OaE7qPhoKO+mnRRyH\n1raM2ZmcWS9+aFlEhUd8k0idt4EZC06H4VRPtZW+/PJjr/23FNIk1ODNOucYlrrW\nXtaU1UiTm7EDSB4i4H18NV7RYFKJPN/HBrxeySIHzY/4KqF4U1/inS7CXJe2HTfR\nHsAsD774qNVmil+6Adu9XLsX6AZWVLG2yHwpPFnCkr8rn+Tfddi/o6Oa/4GJAnD0\n4x5lKWpnfy0xMZ3sON0BeR3by3pBYgAfE5vIk1+uR6ndB7Brld3fwarPuRW5eWJw\nhSG6Sr7V96cppqaHueQgHV+PK7aNRMVDucjBxNNJFQKBgQDhGkh5Mt2D4/RUOori\nNmdr2Kzs8qW3qY1l4h/v8LjVVL+ZIykHIXzF++PzfNUNWbnwlTWyDno/KYEr4zk5\nZiExKnIExV+g13oyiRbE/0q4YjGa17r9QUzQKLu7XCjzTnMoT47xCnVOmLIJ/3de\nB98FchYFspZp1St2zaWQxfYIawKBgQDJi0BM4MMJZyLRnpzpZjeGTwaIEKVRwEa+\nf19Q7PYMvl7ZrixSB79Jw55w1OgC5y11RYtQ+oTJ2VM5GS1jQUU7r7BxatrAnG3O\nltWV/xWGqSaNA/Hms0bgHoo5V3rVmzCFqOeD0f9vegl7UjgUlE+gyzygkk8VZqBG\n6zhlJ9WnbwKBgB7FmAixcmS4QctN4XSBGWw9x43wscTEseaunc0QLERFfJezncUy\nx7rM72F2vC1CCdAgpaF8pyuBQf485rK5CmqNMd8DGEqFilfkM6+kcpN4IO3Y9d/v\nEFAYcWlwdMyl+coV7iV3V4fyCcyiFrBNBSjaarZGrpczI+juveZnmXWXAoGBALlT\n+0S2SaKT3Ei1ecSF4fj3IiJsbBjInkT+Cz/3JiqBw+aXatnjldrWrxNCNDa3Le3w\njTNhqkmSNh0DMeFbW7aOz8j7YTxMnAykVrMfZUP2tyRkxERIBpyAeMpRzvotQmkl\n7/4fVKvFpIJqEHecCbzqJk3hPCeJv0h3c9xQzP6xAoGAbKDqTEljN6afmLTa2jAb\no4+3nfHBb3nuvKXPD3M8d1WLWjiZW7XZaCXva9XEu/SmsQvW4U9xFIby6VD8p33A\nC6Evbt7Qdbo4NlwNL4YpsW1VLf3Qia2+hrR+Ol8OEXqJPPL5Ijv0rnOisBDvjHfR\nOVFoSHaFkqqN3qGjYXHxYOI=\n-----END PRIVATE KEY-----\n",
+  "client_email": "mycompiter@bitcoinprediction-271223.iam.gserviceaccount.com",
+  "client_id": "100555951533222943260",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/mycompiter%40bitcoinprediction-271223.iam.gserviceaccount.com"
+}
