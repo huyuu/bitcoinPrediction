@@ -148,16 +148,16 @@ class GaussianProcessAI():
 
     def trainFromHistoryData(self, testifyRadio=0.2, shouldPreprocessData=False):
         # fetch data
-        data = pd.read_csv(path).dropna()
+        data = pd.read_csv(path)
         if not 'ClassLabel' in data.columns or shouldPreprocessData:
             data = self.preprocessData()
-        data = data.head(data.index.values.shape[0] - self.zoneLength)
+        data = data.dropna().reset_index(drop=True)
         # set samples
         testSamplesAmount = int(data.index.values.shape[0] * testifyRadio)
         trainSamplesAmount = data.index.values.shape[0] - testSamplesAmount
-        trainSamples = data[['Delta', 'RSI14']].values[:trainSamplesAmount, :]
+        trainSamples = data[['BBPosition', 'RSI14']].values[:trainSamplesAmount, :]
         trainLabels = data['ClassLabel'].values[:trainSamplesAmount].reshape(-1, 1)
-        testSamples = data[['Delta', 'RSI14']].values[trainSamplesAmount:, :]
+        testSamples = data[['BBPosition', 'RSI14']].values[trainSamplesAmount:, :]
         testLabels = data['ClassLabel'].values[trainSamplesAmount:].reshape(-1, 1)
 
         # _0samples = data[data.ClassLabel == 0][['BBPosition', 'RSI14']]
