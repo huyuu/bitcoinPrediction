@@ -14,7 +14,7 @@ class PreprocessingWorker():
         self.determinateSigma = determinateSigma  # 1.0 * sigma
 
 
-    def process(self, shouldShowData=True):
+    def processHistoryData(self, shouldShowData=True):
         print('Start preprocessing history data ...')
         # fetch data
         # data = pd.read_csv(path).dropna().reset_index(drop=True)
@@ -92,6 +92,7 @@ class PreprocessingWorker():
         pl.scatter(_1samples['BBPosition'], _1samples['RSI14'], c='gray', alpha=0.3)
         pl.scatter(_2samples['BBPosition'], _2samples['RSI14'], c='r')
         pl.show()
+
 
 
 if __name__ == '__main__':
