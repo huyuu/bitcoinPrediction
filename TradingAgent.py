@@ -22,19 +22,20 @@ class TradingAgent():
 
     def run(self):
         responseQueue = mp.SimpleQueue()
-
+        # run listen market process
         process = mp.Process(target=listenMarketWithMinTimeSpan, args=(self.client, responseQueue))
         process.start()
         self.processes.append(process)
-
+        # run translate accumulated responses process
         process = mp.Process(target=translateAccumulatedResponses, args=(responseQueue,))
         process.start()
         self.processes.append(process)
+        # run predict now process
 
-
+        # main loop
         try:
             while True:
-                time.sleep(10)
+                time.sleep(3600 * 24)
 
         except KeyboardInterrupt:
             print('Start ending process ...')
