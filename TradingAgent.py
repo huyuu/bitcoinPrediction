@@ -10,6 +10,8 @@ import queue as qu
 import os
 import pybitflyer as bf
 
+from NeuralNetworkAI import NeuralNetworkAI
+
 
 bitflyerBaseURL = 'https://api.bitflyer.com/v1/'
 shouldContinue = True
@@ -18,7 +20,9 @@ shouldContinue = True
 class TradingAgent():
     def __init__(self):
         self.client = bf.API()
+        self.ai = NeuralNetworkAI()
         self.processes = []
+
 
     def run(self):
         responseQueue = mp.SimpleQueue()
@@ -31,6 +35,9 @@ class TradingAgent():
         process.start()
         self.processes.append(process)
         # run predict now process
+        process = mp.Process(target=predictTheLatest15MIN)
+        process.start()
+        self.processes.append(process)
 
         # main loop
         try:
@@ -64,6 +71,8 @@ def listenMarketWithMinTimeSpan(client, queue):
             response = client.ticker(product_code="BTC_JPY")
             queue.put(response)
             time.sleep(1)
+        else:
+            time.sleep(0.5)
 
 
 def translateAccumulatedResponses(queue):
@@ -98,8 +107,54 @@ def translateAccumulatedResponses(queue):
             print(f'Translation ends after processing {responseCount} responses.')
             # sleep for 1 minute
             time.sleep(60 * 4)
+        else:
+            time.sleep(10)
+
+
+def predictTheLatest15MIN():
+    ai = NeuralNetworkAI()
+
+    while True:
+        if shouldContinue == False:
+            return
+
+        now = dt.datetime.utcnow()
+        # now = dt.datetime(2020, 5, 24, 3, 16, 0)
+        if 1 <= float(now.minute) % 15 < 2:
+            # get rawData from path
+            dirName = './StoredData'
+            nowString = now.strftime('%Y_%m_%d')
+            path = f'{dirName}/{nowString}.csv'
+            rawData = pd.read_csv(path).dropna()
+            # set Date
+            rawData['Date'] = nu.array([dt.datetime.fromisoformat(str.split('.')[0]) for str in rawData['timestamp']])
+            _end = dt.datetime(now.year, now.month, now.day, now.hour, (int(now.minute)//15)*15, now.second)
+            _start = _end - dt.timedelta(minutes=15)
+            _targets = rawData[rawData.Date >= _start][rawData.Date <= _end]['ltp'].values
+            _open = _targets[0]
+            _close = _targets[-1]
+            _high = _targets.max()
+            _low = _targets.min()
+            data = pd.DataFrame({
+                'Open': _open,
+                'Close': _close,
+                'High': _high,
+                'Low': _low
+            }, index=[0])
+            del rawData, _start, _end, _targets, _open, _close, _high, _low
+            data['RSI14'] = ta.RSI(data['Close'], timeperiod=14)
+            data['BB+2sigma'], data['BBmiddle'], data['BB-2sigma'] = ta.BBANDS(data['Close'], timeperiod=20, nbdevup=2, nbdevdn=2)
+            data['Sigma'] = (data['BB+2sigma'] - data['BBmiddle'])/2
+            data['BBPosition'] = (data['Close'] - data['BBmiddle'])/data['Sigma']
+            # pass it to ai
+            ai.predictCurrentSituation(data, shouldShowGraph=False)
+            time.sleep(60 * 13)
+        else:
+            time.sleep(10)
+
 
 
 if __name__ == '__main__':
     agent = TradingAgent()
-    agent.run()
+    # agent.run()
+    predictTheLatest15MIN()

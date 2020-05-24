@@ -10,18 +10,17 @@ import time
 from urllib.error import HTTPError
 
 
-path = "BTC-JPY.csv"
-# coinApiKeys = ["55256919-0DF4-45A0-B899-581C990D6E5E", "94483EBE-A1B9-49DC-8ED8-B35BC986A1A6", "AFA241C6-C5DE-4BD7-8033-4C7175F83A21", "BE9D33EB-F1BB-4435-9614-38EF94DF2C4F"]
+# path = "BTC-JPY.csv"
+# coinApiKeys = ["F5F1D416-EAEF-4654-ADA9-D728E9C9A226", "4934D542-652A-46AB-A6A8-BFC8511B251A", "55256919-0DF4-45A0-B899-581C990D6E5E", "94483EBE-A1B9-49DC-8ED8-B35BC986A1A6", "AFA241C6-C5DE-4BD7-8033-4C7175F83A21", "BE9D33EB-F1BB-4435-9614-38EF94DF2C4F"]
 coinApiKeys = ["F5F1D416-EAEF-4654-ADA9-D728E9C9A226", "4934D542-652A-46AB-A6A8-BFC8511B251A"]
 
 class PreprocessingWorker():
-    def __init__(self, zoneLength=30, determinateSigma=1.0):
-        self.zoneLength = zoneLength  # days
+    def __init__(self, determinateSigma=1.0):
         self.determinateSigma = determinateSigma  # 1.0 * sigma
 
 
     # reference: https://note.com/mman/n/n7cccd8bb8961
-    def downloadMinuteSpanData(self, start, end=dt.datetime.utcnow()):
+    def download15MinuteSpanData(self, start, end=dt.datetime.utcnow()):
         key = coinApiKeys.pop()
         client = CoinAPIv1(key)
         # start = dt.datetime(end.year - 3, end.month, end.day, 0, 0, 0)
@@ -55,7 +54,6 @@ class PreprocessingWorker():
             if os.path.exists(filePath):
                 data = pd.read_csv(filePath)
                 responseData = pd.DataFrame(response)
-                # responseData = pd.DataFrame(client.ohlcv_historical_data('COINCHECK_SPOT_BTC_JPY', {'period_id': '15MIN', 'time_start': _start.isoformat(), 'limit': 8640}))
                 responseData = responseData.rename(columns={
                     'price_open': 'Open',
                     'price_close': 'Close',
@@ -69,7 +67,6 @@ class PreprocessingWorker():
             # if data of the date still not exists, create from the response.
             else:
                 data = pd.DataFrame(response)
-                # data = pd.DataFrame(client.ohlcv_historical_data('COINCHECK_SPOT_BTC_JPY', {'period_id': '15MIN', 'time_start': _start.isoformat(), 'limit': 8640}))
                 data = data.rename(columns={
                     'price_open': 'Open',
                     'price_close': 'Close',
@@ -83,22 +80,45 @@ class PreprocessingWorker():
             # prepare for next loop
             date += dt.timedelta(days=1)
             print(f'Date {_start} to {_end} completed.')
-            time.sleep(10)
+            time.sleep(5)
 
 
-    def processHistoryData(self, shouldShowData=True):
+    def processShortermHistoryData(self, span='15MIN', shouldShowData=True):
         print('Start preprocessing history data ...')
+        # general constants
+        dirName = './HistoryData'
+        fileNames = filter(lambda name: '.csv' in name, os.listdir(dirName))
+        fileNames = sorted([ (name, dt.datetime.strptime(name.split('.csv')[0], '%Y_%m_%d_%H_%M')) for name in fileNames ], key=lambda pair: pair[1])
+        storedDirName = './LabeledData'
+        storedFilePath = f'{storedDirName}/{span}.csv'
+        # switch for span
+        if span == '15MIN':
+            # fetch data
+            name, date = fileNames[0]
+            data = pd.read_csv(f'{dirName}/{name}')
+            for name, date in fileNames[1:]:
+                _newData = pd.read_csv(f'{dirName}/{name}')
+                _newData = _newData.drop(_newData.index[[-1]])
+                data = pd.concat([data, _newData])
+            data = data.drop(['Volume', 'trades_count'], axis=1).dropna().reset_index(drop=True)
+            del fileNames
+            self.__processData(data, storedFilePath, shouldShowData=True)
+
+
+    def __processData(self, data, path, zoneLength=20, shouldShowData=True):
+
         # fetch data
         # data = pd.read_csv(path).dropna().reset_index(drop=True)
-        _end = dt.date.today()
-        _start = dt.date(_end.year - 4, _end.month, _end.day)
-        data = pdr.DataReader('BTC-JPY', 'yahoo', _start, _end).dropna().reset_index(drop=False)
+        # _end = dt.date.today()
+        # _start = dt.date(_end.year - 4, _end.month, _end.day)
+        # data = pdr.DataReader('BTC-JPY', 'yahoo', _start, _end).dropna().reset_index(drop=False)
+
         # calculate labels
-        trainSamples = data['Close'].values[:-self.zoneLength]
+        trainSamples = data['Close'].values[:-zoneLength]
         trainLabels = []
-        for index in data.index.values[:-self.zoneLength]:
+        for index in data.index.values[:-zoneLength]:
             focusingValue = data.iloc[index].loc['Close']
-            targetIndices = range(index, index+self.zoneLength)
+            targetIndices = range(index, index+zoneLength)
             points = nu.array([])
             for targetIndex in targetIndices:
                 targetData = data.iloc[targetIndex][['High', 'Low']]
@@ -114,7 +134,7 @@ class PreprocessingWorker():
                 label = 1
             trainLabels.append(label)
         trainLabels = nu.array(trainLabels, dtype=nu.int)
-        _nas = nu.zeros(self.zoneLength)
+        _nas = nu.zeros(zoneLength)
         _nas[:] = nu.nan
         data['ClassLabel'] = nu.concatenate([trainLabels, _nas])
         # calculate Delta
@@ -140,21 +160,23 @@ class PreprocessingWorker():
         data['RSI30'] = ta.RSI(data['Close'], timeperiod=30)
         # calculate BB
         # reference: https://note.com/10mohi6/n/n92c6ed9af759
-        data['BB+1sigma'], data['BBmiddle'], data['BB-1sigma'] = ta.BBANDS(data['Close'], timeperiod=20, nbdevup=2, nbdevdn=2)
-        data['Sigma'] = (data['BB+1sigma'] - data['BBmiddle'])/2
+        data['BB+2sigma'], data['BBmiddle'], data['BB-2sigma'] = ta.BBANDS(data['Close'], timeperiod=20, nbdevup=2, nbdevdn=2)
+        data['Sigma'] = (data['BB+2sigma'] - data['BBmiddle'])/2
         data['BBPosition'] = (data['Close'] - data['BBmiddle'])/data['Sigma']
 
         data.to_csv(path, index=False, header=True)
 
         if shouldShowData:
-            self.showData()
+            self.showData(path, data)
 
         print('Ends preprocessing history data.')
         return data
 
 
-    def showData(self, data=None):
-        if data == None:
+    def showData(self, path, data=None):
+        if data:
+            pass
+        else:
             data = pd.read_csv(path).dropna().reset_index(drop=False)
 
         _0samples = data[data.ClassLabel == 0][['BBPosition', 'RSI14']]
@@ -166,11 +188,57 @@ class PreprocessingWorker():
         pl.show()
 
 
+    def dampShortermDataIntoSpanData(self, span='15MIN', end=dt.datetime.utcnow()):
+        dirName = './StoredData'
+        fileNames = filter(lambda name: '.csv' in name, os.listdir(dirName))
+        fileNames = sorted([ (name, dt.datetime.strptime(name.split('.csv')[0], '%Y_%m_%d')) for name in fileNames ], key=lambda pair: pair[1])
+        storedDirName = './LabeledData'
+        storedFilePath = f'{storedDirName}/{span}.csv'
+
+        data = pd.read_csv(storedFilePath)
+        latestDate = dt.datetime.fromisoformat(data.tail(1)['Date'].split('.')[0])
+
+        if span == '15MIN':
+            date = latestDate
+            while date + dt.timedelta(minutes=15) <= end:
+                _start = dt.datetime(date.year, date.month, date.day, date.hour, (int(date.minute)//15)*15, date.second)
+                _end = _start += dt.timedelta(minutes=15)
+                pathForDate = f'{dirName}/' + date.strftime('%Y_%m_%d') + '.csv'
+                if pathForDate in fileNames:
+                    rawData = pd.read_csv(pathForDate).dropna()
+                    rawData['Date'] = nu.array([dt.datetime.fromisoformat(str.split('.')[0]) for str in rawData['timestamp']])
+                    _targets = rawData[rawData.Date >= _start][rawData.Date <= _end]['ltp'].values
+                    _open = _targets[0]
+                    _close = _targets[-1]
+                    _high = _targets.max()
+                    _low = _targets.min()
+                    newData = pd.DateFrame({
+                        'Date': date.isoformat() + '0Z',
+                        'time_period_end': (date + dt.timedelta(minutes=15)).isoformat() + '0Z',
+                        'Open': _open,
+                        'Close': _close,
+                        'High': _high,
+                        'Low': _low
+                    })
+                    newData['time_open'] = newData['Date']
+                    newData['time_close'] = newData['time_period_end']
+                    data = pd.concat([data, newData])
+                else:
+                    continue
+        data.to_csv(storedFilePath, index=False, header=True)
+
+
+
 
 if __name__ == '__main__':
     worker = PreprocessingWorker()
     # worker.process()
-    # worker.showData()
-    start = dt.datetime(2017, 12, 9, 0, 0, 0)
-    now = dt.datetime.utcnow()
-    worker.downloadMinuteSpanData(start=start, end=now)
+    # worker.showData(path='./LabeledData/15MIN.csv')
+
+    # start = dt.datetime(2018, 6, 28, 0, 0, 0)
+    # now = dt.datetime.utcnow()
+    # worker.download15MinuteSpanData(start=start, end=now)
+
+    worker.dampShortermDataIntoSpanData()
+    
+    # worker.processShortermHistoryData(span='15MIN')
