@@ -19,6 +19,7 @@ class CNNAI():
 
 
     def train(self, testifyRadio=0.2, accuracyNeeded=0.3):
+        _start = dt.datetime.now()
         # check if dir exists
         dirName = './LabeledData'
         if os.path.exists(dirName):
@@ -29,17 +30,16 @@ class CNNAI():
         span = '15MIN'
         path = f'{dirName}/{span}.csv'
         data = pd.read_csv(path).dropna().reset_index(drop=True)
+        print('class probability:\n{}%'.format(data.groupby('LabelCNNPost1').size() / float(data.index.values.ravel().shape[0]) * 100))
         graphAmount = len(data['Date'].values.ravel()[24*4:-300])
-        print(graphAmount)
         graphData = nu.zeros((graphAmount, 24*4, 24*4), dtype=nu.int)
         # get graph
         for i, dateString in enumerate(data['Date'].values.ravel()[24*4:-300]):
             graphName = dateString.split('.')[0].replace('T', '_').replace(':', '-')
             _graphData = pd.read_csv(f'{dirName}/graphData/{graphName}.csv', index_col=0)
             graphData[i, :, :] = _graphData.values.reshape(24*4, 24*4)
-            print(f'{i} of {graphAmount}')
+            # print(f'{i} of {graphAmount}')
         graphData = graphData.reshape(-1, 24*4, 24*4, 1)
-
         # start training precedure. First, preprocessing
         testSamplesAmount = int(graphData.shape[0] * testifyRadio)
         trainSamplesAmount = int(graphData.shape[0] - testSamplesAmount)
@@ -48,11 +48,10 @@ class CNNAI():
         testSamples = graphData[trainSamplesAmount:, :, :, :]
         testLabels = data['LabelCNNPost1'].values[int(24*4+trainSamplesAmount):-300].reshape(-1, 1)
         print('Start training model ...')
-        _start = dt.datetime.now()
         # Second, train until accuracy needed is achieved
         accuracy = 0
         while accuracy < accuracyNeeded:
-            self.model.fit(trainSamples, trainLabels.ravel(), epochs=10)
+            self.model.fit(trainSamples, trainLabels.ravel(), epochs=5)
             loss, accuracy = self.model.evaluate(testSamples, testLabels.ravel())
             if accuracy < accuracyNeeded:
                 print('Accuracy not enough, try again ...')

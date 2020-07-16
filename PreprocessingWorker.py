@@ -84,6 +84,7 @@ class PreprocessingWorker():
 
     def processShortermHistoryData(self, span='15MIN', shouldShowData=True):
         resolution = int(24*4)
+        _start = dt.datetime.now()
         print('Start preprocessing history data ...')
         # general constants
         dirName = './HistoryData'
@@ -140,7 +141,8 @@ class PreprocessingWorker():
 
             # self.__processData(data, storedFilePath, shouldShowData=True)
             # data = self.dumpShortermDataIntoSpanData(span=span)
-        print('History data preprocessing done.')
+        timeCost = (dt.datetime.now() - _start).total_seconds()
+        print('History data preprocessing done with accuracy {accuracy}. (time cost: {timeCost} seconds)')
 
 
     def __processData(self, data, path, zoneLength=20, shouldShowData=True):
