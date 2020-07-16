@@ -104,20 +104,19 @@ class PreprocessingWorker():
                 _newData = _newData.drop(_newData.index[[-1]])
                 data = pd.concat([data, _newData])
             data = data.drop(['Volume', 'trades_count'], axis=1).dropna().reset_index(drop=True)
-            data.to_csv(storedFilePath, index=False, header=True)
             # del fileNames
 
             for t in data.index.values[resolution:-1]:
-                targetIndices = range(t-24*4, t)
-                highs = data.loc[targetIndices, 'High'].values.ravel()
-                lows = data.loc[targetIndices, 'Low'].values.ravel()
-                top = highs.max()
-                down = lows.min()
+                targetIndices = range(t-24*4 +1, t+1 +1)
+                # highs = data.loc[targetIndices, 'High'].values.ravel()
+                # lows = data.loc[targetIndices, 'Low'].values.ravel()
+                top = data.loc[targetIndices, 'High'].max()
+                down = data.loc[targetIndices, 'Low'].min()
                 topDownArray = nu.linspace(down, top, resolution)
                 # find label
                 nowMiddle = (data.loc[t, 'High'] + data.loc[t, 'Low'])/2
                 futureMiddle = (data.loc[t+1, 'High'] + data.loc[t+1, 'Low'])/2
-                sigma = (highs[-1] - lows[-1])/(1.96*2)
+                sigma = nu.abs((data.loc[t, 'High'] - data.loc[t, 'Low'])/(1.96*2))
                 if futureMiddle > nowMiddle + 0.84*sigma:
                     data.loc[t, 'LabelCNNPost1'] = 0
                 elif futureMiddle >= nowMiddle + 0.26*sigma:
@@ -130,14 +129,15 @@ class PreprocessingWorker():
                     data.loc[t, 'LabelCNNPost1'] = 4
 
                 graphArray = nu.zeros((24*4, resolution), dtype=nu.int)
-                for i in range(24*4):
-                    lowerBound = lows[i]
-                    upperBound = highs[i]
+                for i, _t in enumerate(targetIndices[:-1]):
+                    lowerBound = data.loc[_t, 'Low']
+                    upperBound = data.loc[_t, 'High']
                     graphArray[i, :] = nu.array([ True if lowerBound <= value <= upperBound else False for value in topDownArray ]) * 1
-                graphData = pd.DataFrame(graphArray, index=data.loc[targetIndices, 'Date'])
+                graphData = pd.DataFrame(graphArray, index=data.loc[targetIndices[:-1], 'Date'])
                 graphName = data.loc[t, 'Date'].split('.')[0].replace('T', '_').replace(':', '-')
                 graphData.to_csv(f'{graphDataDir}/{graphName}.csv', index=True, header=True)
             data.to_csv(storedFilePath, index=False, header=True)
+
             # self.__processData(data, storedFilePath, shouldShowData=True)
             # data = self.dumpShortermDataIntoSpanData(span=span)
         print('History data preprocessing done.')
@@ -212,19 +212,25 @@ class PreprocessingWorker():
         return data
 
 
-    def showData(self, path, data):
-        # if data:
-        #     pass
-        # else:
-        #     data = pd.read_csv(path).dropna().reset_index(drop=False)
+    # def showData(self, path, data):
+    #     # if data:
+    #     #     pass
+    #     # else:
+    #     #     data = pd.read_csv(path).dropna().reset_index(drop=False)
+    #
+    #     _0samples = data[data.ClassLabel == 0][['BBPosition', 'RSI14']]
+    #     _1samples = data[data.ClassLabel == 1][['BBPosition', 'RSI14']]
+    #     _2samples = data[data.ClassLabel == 2][['BBPosition', 'RSI14']]
+    #     pl.scatter(_0samples['BBPosition'], _0samples['RSI14'], c='g')
+    #     pl.scatter(_1samples['BBPosition'], _1samples['RSI14'], c='gray', alpha=0.3)
+    #     pl.scatter(_2samples['BBPosition'], _2samples['RSI14'], c='r')
+    #     pl.show()
 
-        _0samples = data[data.ClassLabel == 0][['BBPosition', 'RSI14']]
-        _1samples = data[data.ClassLabel == 1][['BBPosition', 'RSI14']]
-        _2samples = data[data.ClassLabel == 2][['BBPosition', 'RSI14']]
-        pl.scatter(_0samples['BBPosition'], _0samples['RSI14'], c='g')
-        pl.scatter(_1samples['BBPosition'], _1samples['RSI14'], c='gray', alpha=0.3)
-        pl.scatter(_2samples['BBPosition'], _2samples['RSI14'], c='r')
+    def show(self, graphData, label):
+        pl.title(label)
+        pl.imshow(graphData)
         pl.show()
+        time.sleep(3)
 
 
     def dumpShortermDataIntoSpanData(self, span='15MIN', end=dt.datetime.utcnow()):

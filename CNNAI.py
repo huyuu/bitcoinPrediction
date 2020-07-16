@@ -18,7 +18,7 @@ class CNNAI():
         self.modelPath = "cnnmodel.h5"
 
 
-    def train(self, testifyRadio=0.2, accuracyNeeded=0.4):
+    def train(self, testifyRadio=0.2, accuracyNeeded=0.3):
         # check if dir exists
         dirName = './LabeledData'
         if os.path.exists(dirName):
@@ -29,11 +29,11 @@ class CNNAI():
         span = '15MIN'
         path = f'{dirName}/{span}.csv'
         data = pd.read_csv(path).dropna().reset_index(drop=True)
-        graphAmount = len(data['Date'].values.ravel()[24*4:-1])
+        graphAmount = len(data['Date'].values.ravel()[24*4:-300])
         print(graphAmount)
         graphData = nu.zeros((graphAmount, 24*4, 24*4), dtype=nu.int)
         # get graph
-        for i, dateString in enumerate(data['Date'].values.ravel()[24*4:-1]):
+        for i, dateString in enumerate(data['Date'].values.ravel()[24*4:-300]):
             graphName = dateString.split('.')[0].replace('T', '_').replace(':', '-')
             _graphData = pd.read_csv(f'{dirName}/graphData/{graphName}.csv', index_col=0)
             graphData[i, :, :] = _graphData.values.reshape(24*4, 24*4)
@@ -46,7 +46,7 @@ class CNNAI():
         trainSamples = graphData[:trainSamplesAmount, :, :, :]
         trainLabels = data['LabelCNNPost1'].values[24*4:int(24*4+trainSamplesAmount)].reshape(-1, 1)
         testSamples = graphData[trainSamplesAmount:, :, :, :]
-        testLabels = data['LabelCNNPost1'].values[int(24*4+trainSamplesAmount):-1].reshape(-1, 1)
+        testLabels = data['LabelCNNPost1'].values[int(24*4+trainSamplesAmount):-300].reshape(-1, 1)
         print('Start training model ...')
         _start = dt.datetime.now()
         # Second, train until accuracy needed is achieved
