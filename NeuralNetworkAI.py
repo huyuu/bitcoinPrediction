@@ -8,7 +8,6 @@ import pickle
 from matplotlib import pyplot as pl
 import datetime as dt
 import os
-import talib as ta
 from tensorflow import keras as kr
 import seaborn as sns
 
@@ -27,7 +26,7 @@ class NeuralNetworkAI():
         self.model = self.__buildModel()
 
 
-    def trainSpanData(self, span='15MIN', testifyRadio=0.2, accuracyNeeded=0.38):
+    def trainSpanData(self, span='15MIN', testifyRadio=0.2, accuracyNeeded=0.4):
         dirName = './LabeledData'
         if os.path.exists(dirName):
             pass
@@ -40,7 +39,7 @@ class NeuralNetworkAI():
             self.__train(data, testifyRadio, accuracyNeeded)
 
 
-    def __train(self, data, testifyRadio=0.2, accuracyNeeded=0.38):
+    def __train(self, data, testifyRadio=0.2, accuracyNeeded=0.4):
         # fetch data
         # data = pd.read_csv(path).dropna().reset_index(drop=False)
         # set samples
@@ -57,7 +56,7 @@ class NeuralNetworkAI():
 
         accuracy = 0
         while accuracy < accuracyNeeded:
-            self.model.fit(trainSamples, trainLabels.ravel(), epochs=15)
+            self.model.fit(trainSamples, trainLabels.ravel(), epochs=30)
             loss, accuracy = self.model.evaluate(testSamples, testLabels.ravel())
             if accuracy < accuracyNeeded:
                 print('Accuracy not enough, try again ...')
@@ -115,10 +114,10 @@ class NeuralNetworkAI():
             os.mkdir(dirName)
 
         # fetch sample
-        data['RSI14'] = ta.RSI(data['Close'], timeperiod=14)
-        data['BB+1sigma'], data['BBmiddle'], data['BB-1sigma'] = ta.BBANDS(data['Close'], timeperiod=20, nbdevup=2, nbdevdn=2)
-        data['Sigma'] = (data['BB+1sigma'] - data['BBmiddle'])/2
-        data['BBPosition'] = (data['Close'] - data['BBmiddle'])/data['Sigma']
+        # data['RSI14'] = ta.RSI(data['Close'], timeperiod=14)
+        # data['BB+1sigma'], data['BBmiddle'], data['BB-1sigma'] = ta.BBANDS(data['Close'], timeperiod=20, nbdevup=2, nbdevdn=2)
+        # data['Sigma'] = (data['BB+1sigma'] - data['BBmiddle'])/2
+        # data['BBPosition'] = (data['Close'] - data['BBmiddle'])/data['Sigma']
         sample = data[self.parameters].values.reshape(1, -1)
 
         # if should train again, run the train. Otherwise, use previous model
@@ -195,6 +194,7 @@ class NeuralNetworkAI():
             kr.layers.Flatten(input_shape=(len(self.parameters),)),
             kr.layers.Dense(10, activation='relu'),
             kr.layers.Dense(10, activation='relu'),
+            kr.layers.Dense(10, activation='relu'),
             kr.layers.Dense(3, activation='softmax')
         ])
         model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
@@ -206,7 +206,9 @@ if __name__ == '__main__':
     # worker.process()
 
     ai = NeuralNetworkAI()
-    # ai.trainForSpanData()
-    ai.showModel(shouldShowImmediately=True)
+    # ai.trainSpanData()
+    # ai.showModel(shouldShowImmediately=True)
+    data = pd.read_csv('./LabeledData/15MIN.csv').tail(1)
+    ai.predictCurrentSituation(data, shouldShowGraph=True)
     # ai.predictToday(shouldTrainAgain=False, shouldShowGraph=True)
     # plot()

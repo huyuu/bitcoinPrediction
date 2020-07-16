@@ -11,8 +11,7 @@ from urllib.error import HTTPError
 
 
 # path = "BTC-JPY.csv"
-# coinApiKeys = ["F5F1D416-EAEF-4654-ADA9-D728E9C9A226", "4934D542-652A-46AB-A6A8-BFC8511B251A", "55256919-0DF4-45A0-B899-581C990D6E5E", "94483EBE-A1B9-49DC-8ED8-B35BC986A1A6", "AFA241C6-C5DE-4BD7-8033-4C7175F83A21", "BE9D33EB-F1BB-4435-9614-38EF94DF2C4F"]
-coinApiKeys = ["F5F1D416-EAEF-4654-ADA9-D728E9C9A226", "4934D542-652A-46AB-A6A8-BFC8511B251A"]
+coinApiKeys = ["BF49F16C-E6CF-4B26-A22E-F32599C6E404", "F5F1D416-EAEF-4654-ADA9-D728E9C9A226", "4934D542-652A-46AB-A6A8-BFC8511B251A", "55256919-0DF4-45A0-B899-581C990D6E5E", "94483EBE-A1B9-49DC-8ED8-B35BC986A1A6", "AFA241C6-C5DE-4BD7-8033-4C7175F83A21", "BE9D33EB-F1BB-4435-9614-38EF94DF2C4F"]
 
 class PreprocessingWorker():
     def __init__(self, determinateSigma=1.0):
@@ -84,6 +83,7 @@ class PreprocessingWorker():
 
 
     def processShortermHistoryData(self, span='15MIN', shouldShowData=True):
+        resolution = int(24*4)
         print('Start preprocessing history data ...')
         # general constants
         dirName = './HistoryData'
@@ -91,6 +91,9 @@ class PreprocessingWorker():
         fileNames = sorted([ (name, dt.datetime.strptime(name.split('.csv')[0], '%Y_%m_%d_%H_%M')) for name in fileNames ], key=lambda pair: pair[1])
         storedDirName = './LabeledData'
         storedFilePath = f'{storedDirName}/{span}.csv'
+        graphDataDir = f'./{storedDirName}/graphData'
+        if not os.path.exists(graphDataDir):
+            os.mkdir(graphDataDir)
         # switch for span
         if span == '15MIN':
             # fetch data
@@ -101,8 +104,43 @@ class PreprocessingWorker():
                 _newData = _newData.drop(_newData.index[[-1]])
                 data = pd.concat([data, _newData])
             data = data.drop(['Volume', 'trades_count'], axis=1).dropna().reset_index(drop=True)
-            del fileNames
-            self.__processData(data, storedFilePath, shouldShowData=True)
+            data.to_csv(storedFilePath, index=False, header=True)
+            # del fileNames
+
+            for t in data.index.values[resolution:-1]:
+                targetIndices = range(t-24*4, t)
+                highs = data.loc[targetIndices, 'High'].values.ravel()
+                lows = data.loc[targetIndices, 'Low'].values.ravel()
+                top = highs.max()
+                down = lows.min()
+                topDownArray = nu.linspace(down, top, resolution)
+                # find label
+                nowMiddle = (data.loc[t, 'High'] + data.loc[t, 'Low'])/2
+                futureMiddle = (data.loc[t+1, 'High'] + data.loc[t+1, 'Low'])/2
+                sigma = (highs[-1] - lows[-1])/(1.96*2)
+                if futureMiddle > nowMiddle + 0.84*sigma:
+                    data.loc[t, 'LabelCNNPost1'] = 0
+                elif futureMiddle >= nowMiddle + 0.26*sigma:
+                    data.loc[t, 'LabelCNNPost1'] = 1
+                elif futureMiddle >= nowMiddle - 0.26*sigma:
+                    data.loc[t, 'LabelCNNPost1'] = 2
+                elif futureMiddle > nowMiddle - 0.84*sigma:
+                    data.loc[t, 'LabelCNNPost1'] = 3
+                else:
+                    data.loc[t, 'LabelCNNPost1'] = 4
+
+                graphArray = nu.zeros((24*4, resolution), dtype=nu.int)
+                for i in range(24*4):
+                    lowerBound = lows[i]
+                    upperBound = highs[i]
+                    graphArray[i, :] = nu.array([ True if lowerBound <= value <= upperBound else False for value in topDownArray ]) * 1
+                graphData = pd.DataFrame(graphArray, index=data.loc[targetIndices, 'Date'])
+                graphName = data.loc[t, 'Date'].split('.')[0].replace('T', '_').replace(':', '-')
+                graphData.to_csv(f'{graphDataDir}/{graphName}.csv', index=True, header=True)
+            data.to_csv(storedFilePath, index=False, header=True)
+            # self.__processData(data, storedFilePath, shouldShowData=True)
+            # data = self.dumpShortermDataIntoSpanData(span=span)
+        print('History data preprocessing done.')
 
 
     def __processData(self, data, path, zoneLength=20, shouldShowData=True):
@@ -117,11 +155,11 @@ class PreprocessingWorker():
         trainSamples = data['Close'].values[:-zoneLength]
         trainLabels = []
         for index in data.index.values[:-zoneLength]:
-            focusingValue = data.iloc[index].loc['Close']
+            focusingValue = data.loc[index, 'Close']
             targetIndices = range(index, index+zoneLength)
             points = nu.array([])
             for targetIndex in targetIndices:
-                targetData = data.iloc[targetIndex][['High', 'Low']]
+                targetData = data.loc[targetIndex, ['High', 'Low']]
                 targetPoints = (targetData['High'] - targetData['Low']) * nu.random.rand(50) + targetData['Low']
                 points = nu.concatenate([points, targetPoints])
             std = nu.std(points)
@@ -136,33 +174,34 @@ class PreprocessingWorker():
         trainLabels = nu.array(trainLabels, dtype=nu.int)
         _nas = nu.zeros(zoneLength)
         _nas[:] = nu.nan
-        data['ClassLabel'] = nu.concatenate([trainLabels, _nas])
+        data.loc[:, 'ClassLabel'] = nu.concatenate([trainLabels, _nas])
         # calculate Delta
-        data['Delta'] = data['Close'] - data['Open']
+        data.loc[:, 'Delta'] = data['Close'] - data['Open']
         # calculate RSI14
-        rsi14 = []
-        for index in data.index.values[14:]:
-            targetIndices = range(index-14, index)
-            up = 0
-            down = 0
-            for targetIndex in targetIndices:
-                delta = data.iloc[targetIndex]['Delta']
-                if delta >= 0:
-                    up += delta
-                else:
-                    down += nu.abs(delta)
-            rsi14.append(up/(up+down))
-        rsi14 = nu.array(rsi14)
-        _nas = nu.zeros(14)
-        _nas[:] = nu.nan
-        data['RSI14'] = nu.concatenate([_nas, rsi14])
+        # rsi14 = []
+        # for index in data.index.values[14:]:
+        #     targetIndices = range(index-14, index)
+        #     up = 0
+        #     down = 0
+        #     for targetIndex in targetIndices:
+        #         delta = data.iloc[targetIndex]['Delta']
+        #         if delta >= 0:
+        #             up += delta
+        #         else:
+        #             down += nu.abs(delta)
+        #     rsi14.append(up/(up+down))
+        # rsi14 = nu.array(rsi14)
+        # _nas = nu.zeros(14)
+        # _nas[:] = nu.nan
+        # data['RSI14'] = nu.concatenate([_nas, rsi14])
+        data.loc[:, 'RSI14'] = ta.RSI(data['Close'], timeperiod=14) / 100.0
         # calculate RSI30
-        data['RSI30'] = ta.RSI(data['Close'], timeperiod=30)
+        data.loc[:, 'RSI30'] = ta.RSI(data['Close'], timeperiod=30) / 100.0
         # calculate BB
         # reference: https://note.com/10mohi6/n/n92c6ed9af759
-        data['BB+2sigma'], data['BBmiddle'], data['BB-2sigma'] = ta.BBANDS(data['Close'], timeperiod=20, nbdevup=2, nbdevdn=2)
-        data['Sigma'] = (data['BB+2sigma'] - data['BBmiddle'])/2
-        data['BBPosition'] = (data['Close'] - data['BBmiddle'])/data['Sigma']
+        data.loc[:, 'BB+2sigma'], data.loc[:, 'BBmiddle'], data.loc[:, 'BB-2sigma'] = ta.BBANDS(data['Close'], timeperiod=20, nbdevup=2, nbdevdn=2)
+        data.loc[:, 'Sigma'] = (data['BB+2sigma'] - data['BBmiddle'])/2
+        data.loc[:, 'BBPosition'] = (data['Close'] - data['BBmiddle'])/data['Sigma']
 
         data.to_csv(path, index=False, header=True)
 
@@ -173,11 +212,11 @@ class PreprocessingWorker():
         return data
 
 
-    def showData(self, path, data=None):
-        if data:
-            pass
-        else:
-            data = pd.read_csv(path).dropna().reset_index(drop=False)
+    def showData(self, path, data):
+        # if data:
+        #     pass
+        # else:
+        #     data = pd.read_csv(path).dropna().reset_index(drop=False)
 
         _0samples = data[data.ClassLabel == 0][['BBPosition', 'RSI14']]
         _1samples = data[data.ClassLabel == 1][['BBPosition', 'RSI14']]
@@ -188,44 +227,54 @@ class PreprocessingWorker():
         pl.show()
 
 
-    def dampShortermDataIntoSpanData(self, span='15MIN', end=dt.datetime.utcnow()):
+    def dumpShortermDataIntoSpanData(self, span='15MIN', end=dt.datetime.utcnow()):
         dirName = './StoredData'
         fileNames = filter(lambda name: '.csv' in name, os.listdir(dirName))
         fileNames = sorted([ (name, dt.datetime.strptime(name.split('.csv')[0], '%Y_%m_%d')) for name in fileNames ], key=lambda pair: pair[1])
+        fileNames = [ pair[0] for pair in fileNames ]
         storedDirName = './LabeledData'
         storedFilePath = f'{storedDirName}/{span}.csv'
 
         data = pd.read_csv(storedFilePath)
-        latestDate = dt.datetime.fromisoformat(data.tail(1)['Date'].split('.')[0])
+        latestDate = dt.datetime.fromisoformat(data.tail(1)['Date'].values[0].split('.')[0])
 
         if span == '15MIN':
             date = latestDate
             while date + dt.timedelta(minutes=15) <= end:
-                _start = dt.datetime(date.year, date.month, date.day, date.hour, (int(date.minute)//15)*15, date.second)
-                _end = _start += dt.timedelta(minutes=15)
-                pathForDate = f'{dirName}/' + date.strftime('%Y_%m_%d') + '.csv'
-                if pathForDate in fileNames:
+                _start = dt.datetime(date.year, date.month, date.day, date.hour, date.minute, 0)
+                _end = _start + dt.timedelta(minutes=15)
+                fileName = date.strftime('%Y_%m_%d') + '.csv'
+                if fileName in fileNames:
+                    pathForDate = f'{dirName}/{fileName}'
+                    print(f'{pathForDate} in files, start damping ...')
                     rawData = pd.read_csv(pathForDate).dropna()
                     rawData['Date'] = nu.array([dt.datetime.fromisoformat(str.split('.')[0]) for str in rawData['timestamp']])
                     _targets = rawData[rawData.Date >= _start][rawData.Date <= _end]['ltp'].values
-                    _open = _targets[0]
-                    _close = _targets[-1]
-                    _high = _targets.max()
-                    _low = _targets.min()
-                    newData = pd.DateFrame({
-                        'Date': date.isoformat() + '0Z',
-                        'time_period_end': (date + dt.timedelta(minutes=15)).isoformat() + '0Z',
-                        'Open': _open,
-                        'Close': _close,
-                        'High': _high,
-                        'Low': _low
-                    })
-                    newData['time_open'] = newData['Date']
-                    newData['time_close'] = newData['time_period_end']
-                    data = pd.concat([data, newData])
+                    if _targets.shape[0] > 0:
+                        _open = _targets[0]
+                        _close = _targets[-1]
+                        _high = _targets.max()
+                        _low = _targets.min()
+                        newData = pd.DataFrame({
+                            'Date': date.isoformat() + '.0000000Z',
+                            'time_period_end': (date + dt.timedelta(minutes=15)).isoformat() + '.0000000Z',
+                            'Open': _open,
+                            'Close': _close,
+                            'High': _high,
+                            'Low': _low
+                        }, index=[data.index.values[-1]+1])
+                        newData['time_open'] = newData['Date']
+                        newData['time_close'] = newData['time_period_end']
+                        data = pd.concat([data, newData])
                 else:
-                    continue
-        data.to_csv(storedFilePath, index=False, header=True)
+                    print(f'{fileName} not in files, continue ...')
+                # prepare for next loop
+                date = _end
+        data = data.reset_index(drop=True)
+        updatedData = self.__processData(data.tail(100), storedFilePath, shouldShowData=False)
+        data.iloc[-50:] = updatedData.tail(50)
+        data.reset_index(drop=True).to_csv(storedFilePath, index=False, header=True)
+        return data
 
 
 
@@ -235,10 +284,10 @@ if __name__ == '__main__':
     # worker.process()
     # worker.showData(path='./LabeledData/15MIN.csv')
 
-    # start = dt.datetime(2018, 6, 28, 0, 0, 0)
+    # start = dt.datetime(2020,  7, 15, 0, 0, 0)
     # now = dt.datetime.utcnow()
     # worker.download15MinuteSpanData(start=start, end=now)
 
-    worker.dampShortermDataIntoSpanData()
-    
-    # worker.processShortermHistoryData(span='15MIN')
+    # worker.dumpShortermDataIntoSpanData()
+
+    worker.processShortermHistoryData(span='15MIN')
