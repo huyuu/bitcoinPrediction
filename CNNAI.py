@@ -86,5 +86,5 @@ if __name__ == '__main__':
     worker = PreprocessingWorker()
     cnnModel = CNNAI()
 
-    worker.processShortermHistoryData(span='15MIN', resolution=cnnModel.resolution)
+    worker.processShortermHistoryData(span='15MIN', resolution=cnnModel.resolution, coreAmount=2)
     cnnModel.train()
