@@ -10,10 +10,12 @@ import datetime as dt
 import os
 from tensorflow import keras as kr
 import seaborn as sns
+from PreprocessingWorker import PreprocessingWorker
 
 
 class CNNAI():
     def __init__(self):
+        self.resolution = int(24*4)
         self.model = self.__buildModel()
         self.modelPath = "cnnmodel.h5"
 
@@ -32,14 +34,15 @@ class CNNAI():
         data = pd.read_csv(path).dropna().reset_index(drop=True)
         print('class probability:\n{}%'.format(data.groupby('LabelCNNPost1').size() / float(data.index.values.ravel().shape[0]) * 100))
         graphAmount = len(data['Date'].values.ravel()[24*4:-300])
-        graphData = nu.zeros((graphAmount, 24*4, 24*4), dtype=nu.int)
+        graphData = nu.zeros((graphAmount, 24*4, self.resolution), dtype=nu.int)
         # get graph
         for i, dateString in enumerate(data['Date'].values.ravel()[24*4:-300]):
             graphName = dateString.split('.')[0].replace('T', '_').replace(':', '-')
             _graphData = pd.read_csv(f'{dirName}/graphData/{graphName}.csv', index_col=0)
-            graphData[i, :, :] = _graphData.values.reshape(24*4, 24*4)
+            graphData[i, :, :] = _graphData.values.reshape(24*4, self.resolution)
             # print(f'{i} of {graphAmount}')
-        graphData = graphData.reshape(-1, 24*4, 24*4, 1)
+        graphData = nu.random.permuation(graphData)
+        graphData = graphData.reshape(-1, 24*4, self.resolution, 1)
         # start training precedure. First, preprocessing
         testSamplesAmount = int(graphData.shape[0] * testifyRadio)
         trainSamplesAmount = int(graphData.shape[0] - testSamplesAmount)
@@ -64,9 +67,9 @@ class CNNAI():
 
     def __buildModel(self):
         model = kr.models.Sequential([
-            kr.layers.Conv2D(filters=64, kernel_size=3, activation='relu', input_shape=(24*4, 24*4, 1)),
+            kr.layers.Conv2D(filters=64, kernel_size=3, activation='relu', input_shape=(24*4, self.resolution, 1)),
             kr.layers.MaxPooling2D(pool_size=(2, 2)),
-            kr.layers.Conv2D(filters=64, kernel_size=3, activation='relu', input_shape=(24*4, 24*4, 1)),
+            kr.layers.Conv2D(filters=64, kernel_size=3, activation='relu', input_shape=(24*4, self.resolution, 1)),
             kr.layers.MaxPooling2D(pool_size=(2, 2)),
             kr.layers.Dropout(0.25),
             kr.layers.Flatten(),
@@ -80,5 +83,8 @@ class CNNAI():
 
 
 if __name__ == '__main__':
-    model = CNNAI()
-    model.train()
+    worker = PreprocessingWorker()
+    cnnModel = CNNAI()
+
+    worker.processShortermHistoryData(span='15MIN', resolution=cnnModel.resolution)
+    cnnModel.train()
