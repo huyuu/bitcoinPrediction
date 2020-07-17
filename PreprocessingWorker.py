@@ -106,141 +106,55 @@ class PreprocessingWorker():
             data = data.drop(['Volume', 'trades_count'], axis=1).dropna().reset_index(drop=True)
             data['LabelCNNPost1'] = nu.nan
             del fileNames
-            # calculate graphData and update label
-            processTank = []
-            tAmountPerTime = int(data.index.values[int(24*4):-27].ravel().shape[0] / coreAmount)
-            ts = None
-            labelQueue = mp.SimpleQueue()
-            for core in range(coreAmount):
-                if core != coreAmount-1:
-                    ts = data.index.values[int(24*4 + core*tAmountPerTime):int(24*4 + (core+1)*tAmountPerTime)]
-                else:
-                    ts = data.index.values[int(24*4 + core*tAmountPerTime):-27]
-                process = mp.Process(target=generateGraphData, args=(data, ts, resolution, graphDataDir, labelQueue))
-                process.start()
-                processTank.append(process)
-            for process in processTank:
-                process.join()
-
-            # for t in data.index.values[int(24*4):-3]:
-            #     targetIndices = range(t-24*4 +1, t+1 +1)
-            #     # highs = data.loc[targetIndices, 'High'].values.ravel()
-            #     # lows = data.loc[targetIndices, 'Low'].values.ravel()
-            #     top = data.loc[targetIndices, 'High'].max()
-            #     down = data.loc[targetIndices, 'Low'].min()
-            #     topDownArray = nu.linspace(down, top, resolution)
-            #     # find label
-            #     nowMiddle = (data.loc[t, 'High'] + data.loc[t, 'Low'])/2
-            #     futureMiddle = (data.loc[t+1:t+25, 'High'].values.ravel().mean() + data.loc[t+1:t+25, 'Low'].values.ravel().mean())/2
-            #     sigma = nu.abs((data.loc[t, 'High'] - data.loc[t, 'Low'])/(2.57*2))
-            #     if futureMiddle >= nowMiddle + 0.84*sigma:
-            #         data.loc[t, 'LabelCNNPost1'] = 0
-            #     elif futureMiddle >= nowMiddle - 0.84*sigma:
-            #         data.loc[t, 'LabelCNNPost1'] = 1
+            # processTank = []
+            # tAmountPerTime = int(data.index.values[int(24*4):-27].ravel().shape[0] / coreAmount)
+            # ts = None
+            # labelQueue = mp.SimpleQueue()
+            # for core in range(coreAmount):
+            #     if core != coreAmount-1:
+            #         ts = data.index.values[int(24*4 + core*tAmountPerTime):int(24*4 + (core+1)*tAmountPerTime)]
             #     else:
-            #         data.loc[t, 'LabelCNNPost1'] = 2
-            #
-            #     graphArray = nu.zeros((24*4, resolution), dtype=nu.int)
-            #     for i, _t in enumerate(targetIndices[:-1]):
-            #         lowerBound = data.loc[_t, 'Low']
-            #         upperBound = data.loc[_t, 'High']
-            #         graphArray[i, :] = nu.array([ True if lowerBound <= value <= upperBound else False for value in topDownArray ]) * 1
-            #     graphData = pd.DataFrame(graphArray, index=data.loc[targetIndices[:-1], 'Date'])
-            #     graphName = data.loc[t, 'Date'].split('.')[0].replace('T', '_').replace(':', '-')
-            #     graphData.to_csv(f'{graphDataDir}/{graphName}.csv', index=True, header=True)
-            while not labelQueue.empty():
-                index, label = labelQueue.get()
-                data.loc[index, 'LabelCNNPost1'] = label
+            #         ts = data.index.values[int(24*4 + core*tAmountPerTime):-27]
+            #     process = mp.Process(target=generateGraphData, args=(data, ts, resolution, graphDataDir, labelQueue))
+            #     process.start()
+            #     processTank.append(process)
+            # for process in processTank:
+            #     process.join()
+            # calculate graphData and update label
+            for t in data.index.values[int(24*4):-27]:
+                targetIndices = range(t-24*4 +1, t+1 +1)
+                # highs = data.loc[targetIndices, 'High'].values.ravel()
+                # lows = data.loc[targetIndices, 'Low'].values.ravel()
+                top = data.loc[targetIndices, 'High'].max()
+                down = data.loc[targetIndices, 'Low'].min()
+                topDownArray = nu.linspace(down, top, resolution)
+                # find label
+                nowMiddle = (data.loc[t, 'High'] + data.loc[t, 'Low'])/2
+                futureMiddle = (data.loc[t+1:t+25, 'High'].values.ravel().mean() + data.loc[t+1:t+25, 'Low'].values.ravel().mean())/2
+                sigma = nu.abs((data.loc[t, 'High'] - data.loc[t, 'Low'])/(2.57*2))
+                if futureMiddle >= nowMiddle + 0.84*sigma:
+                    data.loc[t, 'LabelCNNPost1'] = 0
+                elif futureMiddle >= nowMiddle - 0.84*sigma:
+                    data.loc[t, 'LabelCNNPost1'] = 1
+                else:
+                    data.loc[t, 'LabelCNNPost1'] = 2
+
+                graphArray = nu.zeros((24*4, resolution), dtype=nu.int)
+                for i, _t in enumerate(targetIndices[:-1]):
+                    lowerBound = data.loc[_t, 'Low']
+                    upperBound = data.loc[_t, 'High']
+                    graphArray[i, :] = nu.array([ True if lowerBound <= value <= upperBound else False for value in topDownArray ]) * 1
+                graphData = pd.DataFrame(graphArray, index=data.loc[targetIndices[:-1], 'Date'])
+                graphName = data.loc[t, 'Date'].split('.')[0].replace('T', '_').replace(':', '-')
+                graphData.to_csv(f'{graphDataDir}/{graphName}.csv', index=True, header=True)
+            # while not labelQueue.empty():
+            #     index, label = labelQueue.get()
+            #     data.loc[index, 'LabelCNNPost1'] = label
             data.to_csv(storedFilePath, index=False, header=True)
 
-            # self.__processData(data, storedFilePath, shouldShowData=True)
-            # data = self.dumpShortermDataIntoSpanData(span=span)
         timeCost = (dt.datetime.now() - _start).total_seconds()
         print(f'History data preprocessing done with time cost: {timeCost} seconds')
 
-
-    def __processData(self, data, path, zoneLength=20, shouldShowData=True):
-
-        # fetch data
-        # data = pd.read_csv(path).dropna().reset_index(drop=True)
-        # _end = dt.date.today()
-        # _start = dt.date(_end.year - 4, _end.month, _end.day)
-        # data = pdr.DataReader('BTC-JPY', 'yahoo', _start, _end).dropna().reset_index(drop=False)
-
-        # calculate labels
-        trainSamples = data['Close'].values[:-zoneLength]
-        trainLabels = []
-        for index in data.index.values[:-zoneLength]:
-            focusingValue = data.loc[index, 'Close']
-            targetIndices = range(index, index+zoneLength)
-            points = nu.array([])
-            for targetIndex in targetIndices:
-                targetData = data.loc[targetIndex, ['High', 'Low']]
-                targetPoints = (targetData['High'] - targetData['Low']) * nu.random.rand(50) + targetData['Low']
-                points = nu.concatenate([points, targetPoints])
-            std = nu.std(points)
-            mean = nu.mean(points)
-            if focusingValue >= mean + self.determinateSigma * std:
-                label = 2
-            elif focusingValue <= mean - self.determinateSigma * std:
-                label = 0
-            else:
-                label = 1
-            trainLabels.append(label)
-        trainLabels = nu.array(trainLabels, dtype=nu.int)
-        _nas = nu.zeros(zoneLength)
-        _nas[:] = nu.nan
-        data.loc[:, 'ClassLabel'] = nu.concatenate([trainLabels, _nas])
-        # calculate Delta
-        data.loc[:, 'Delta'] = data['Close'] - data['Open']
-        # calculate RSI14
-        # rsi14 = []
-        # for index in data.index.values[14:]:
-        #     targetIndices = range(index-14, index)
-        #     up = 0
-        #     down = 0
-        #     for targetIndex in targetIndices:
-        #         delta = data.iloc[targetIndex]['Delta']
-        #         if delta >= 0:
-        #             up += delta
-        #         else:
-        #             down += nu.abs(delta)
-        #     rsi14.append(up/(up+down))
-        # rsi14 = nu.array(rsi14)
-        # _nas = nu.zeros(14)
-        # _nas[:] = nu.nan
-        # data['RSI14'] = nu.concatenate([_nas, rsi14])
-        data.loc[:, 'RSI14'] = ta.RSI(data['Close'], timeperiod=14) / 100.0
-        # calculate RSI30
-        data.loc[:, 'RSI30'] = ta.RSI(data['Close'], timeperiod=30) / 100.0
-        # calculate BB
-        # reference: https://note.com/10mohi6/n/n92c6ed9af759
-        data.loc[:, 'BB+2sigma'], data.loc[:, 'BBmiddle'], data.loc[:, 'BB-2sigma'] = ta.BBANDS(data['Close'], timeperiod=20, nbdevup=2, nbdevdn=2)
-        data.loc[:, 'Sigma'] = (data['BB+2sigma'] - data['BBmiddle'])/2
-        data.loc[:, 'BBPosition'] = (data['Close'] - data['BBmiddle'])/data['Sigma']
-
-        data.to_csv(path, index=False, header=True)
-
-        if shouldShowData:
-            self.showData(path, data)
-
-        print('Ends preprocessing history data.')
-        return data
-
-
-    # def showData(self, path, data):
-    #     # if data:
-    #     #     pass
-    #     # else:
-    #     #     data = pd.read_csv(path).dropna().reset_index(drop=False)
-    #
-    #     _0samples = data[data.ClassLabel == 0][['BBPosition', 'RSI14']]
-    #     _1samples = data[data.ClassLabel == 1][['BBPosition', 'RSI14']]
-    #     _2samples = data[data.ClassLabel == 2][['BBPosition', 'RSI14']]
-    #     pl.scatter(_0samples['BBPosition'], _0samples['RSI14'], c='g')
-    #     pl.scatter(_1samples['BBPosition'], _1samples['RSI14'], c='gray', alpha=0.3)
-    #     pl.scatter(_2samples['BBPosition'], _2samples['RSI14'], c='r')
-    #     pl.show()
 
     def show(self, graphData, label):
         pl.title(label)
