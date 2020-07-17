@@ -1,8 +1,6 @@
 import pandas as pd
-import pandas_datareader.data as pdr
 import datetime as dt
 import numpy as nu
-import talib as ta
 from matplotlib import pyplot as pl
 from coinapi_rest_v1 import CoinAPIv1
 import os
@@ -107,7 +105,7 @@ class PreprocessingWorker():
             data = data.drop(['Volume', 'trades_count'], axis=1).dropna().reset_index(drop=True)
             # del fileNames
 
-            for t in data.index.values[resolution:-1]:
+            for t in data.index.values[resolution:-3]:
                 targetIndices = range(t-24*4 +1, t+1 +1)
                 # highs = data.loc[targetIndices, 'High'].values.ravel()
                 # lows = data.loc[targetIndices, 'Low'].values.ravel()
@@ -116,18 +114,14 @@ class PreprocessingWorker():
                 topDownArray = nu.linspace(down, top, resolution)
                 # find label
                 nowMiddle = (data.loc[t, 'High'] + data.loc[t, 'Low'])/2
-                futureMiddle = (data.loc[t+1, 'High'] + data.loc[t+1, 'Low'])/2
-                sigma = nu.abs((data.loc[t, 'High'] - data.loc[t, 'Low'])/(1.96*2))
-                if futureMiddle > nowMiddle + 0.84*sigma:
+                futureMiddle = (data.loc[t+1, 'High'] + data.loc[t+1, 'Low'] + data.loc[t+2, 'High'] + data.loc[t+2, 'Low'] + data.loc[t+3, 'High'] + data.loc[t+3, 'Low'])/6
+                sigma = nu.abs((data.loc[t, 'High'] - data.loc[t, 'Low'])/(2.57*2))
+                if futureMiddle >= nowMiddle + 0.84*sigma:
                     data.loc[t, 'LabelCNNPost1'] = 0
-                elif futureMiddle >= nowMiddle + 0.26*sigma:
+                elif futureMiddle >= nowMiddle - 0.84*sigma:
                     data.loc[t, 'LabelCNNPost1'] = 1
-                elif futureMiddle >= nowMiddle - 0.26*sigma:
-                    data.loc[t, 'LabelCNNPost1'] = 2
-                elif futureMiddle > nowMiddle - 0.84*sigma:
-                    data.loc[t, 'LabelCNNPost1'] = 3
                 else:
-                    data.loc[t, 'LabelCNNPost1'] = 4
+                    data.loc[t, 'LabelCNNPost1'] = 2
 
                 graphArray = nu.zeros((24*4, resolution), dtype=nu.int)
                 for i, _t in enumerate(targetIndices[:-1]):
@@ -142,7 +136,7 @@ class PreprocessingWorker():
             # self.__processData(data, storedFilePath, shouldShowData=True)
             # data = self.dumpShortermDataIntoSpanData(span=span)
         timeCost = (dt.datetime.now() - _start).total_seconds()
-        print('History data preprocessing done with accuracy {accuracy}. (time cost: {timeCost} seconds)')
+        print(f'History data preprocessing done with time cost: {timeCost} seconds')
 
 
     def __processData(self, data, path, zoneLength=20, shouldShowData=True):
