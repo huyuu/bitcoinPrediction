@@ -82,8 +82,9 @@ class PreprocessingWorker():
             time.sleep(5)
 
 
-    def processShortermHistoryData(self, span='15MIN', shouldShowData=True, resolution=int(24*4), coreAmount=1):
+    def processShortermHistoryData(self, span='15MIN', shouldShowData=True, resolution=int(24*4), timeSpreadPast=int(24*4)):
         _start = dt.datetime.now()
+        timeSpreadFuture = int(timeSpreadPast / 4)
         print('Start preprocessing history data ...')
         # general constants
         dirName = './HistoryData'
@@ -121,8 +122,8 @@ class PreprocessingWorker():
             # for process in processTank:
             #     process.join()
             # calculate graphData and update label
-            for t in data.index.values[int(24*4):-27]:
-                targetIndices = range(t-24*4 +1, t+1 +1)
+            for t in data.index.values[timeSpreadPast:-timeSpreadFuture-2]:
+                targetIndices = range(t-timeSpreadPast +1, t+1 +1)
                 # highs = data.loc[targetIndices, 'High'].values.ravel()
                 # lows = data.loc[targetIndices, 'Low'].values.ravel()
                 top = data.loc[targetIndices, 'High'].max()
@@ -130,8 +131,8 @@ class PreprocessingWorker():
                 topDownArray = nu.linspace(down, top, resolution)
                 # find label
                 nowMiddle = (data.loc[t, 'High'] + data.loc[t, 'Low'])/2
-                futureMiddle = (data.loc[t+1:t+25, 'High'].values.ravel().mean() + data.loc[t+1:t+25, 'Low'].values.ravel().mean())/2
-                sigma = nu.abs((data.loc[t, 'High'] - data.loc[t, 'Low'])/(2.57*2))
+                futureMiddle = (data.loc[t+1:t+timeSpreadFuture+1, 'High'].values.ravel().mean() + data.loc[t+1:t+timeSpreadFuture+1, 'Low'].values.ravel().mean())/2
+                sigma = nu.abs((data.loc[t, 'High'] - data.loc[t, 'Low'])/(1.96*2))
                 if futureMiddle >= nowMiddle + 0.84*sigma:
                     data.loc[t, 'LabelCNNPost1'] = 0
                 elif futureMiddle >= nowMiddle - 0.84*sigma:
@@ -139,7 +140,7 @@ class PreprocessingWorker():
                 else:
                     data.loc[t, 'LabelCNNPost1'] = 2
 
-                graphArray = nu.zeros((24*4, resolution), dtype=nu.int)
+                graphArray = nu.zeros((timeSpreadPast, resolution), dtype=nu.int)
                 for i, _t in enumerate(targetIndices[:-1]):
                     lowerBound = data.loc[_t, 'Low']
                     upperBound = data.loc[_t, 'High']

@@ -16,6 +16,7 @@ from PreprocessingWorker import PreprocessingWorker
 class CNNAI():
     def __init__(self):
         self.resolution = int(24*4)
+        self.timeSpreadPast = int(24*2)
         self.model = self.__buildModel()
         self.modelPath = "cnnmodel.h5"
 
@@ -67,9 +68,9 @@ class CNNAI():
 
     def __buildModel(self):
         model = kr.models.Sequential([
-            kr.layers.Conv2D(filters=64, kernel_size=3, activation='relu', input_shape=(24*4, self.resolution, 1)),
+            kr.layers.Conv2D(filters=64, kernel_size=3, activation='relu', input_shape=(self.timeSpreadPast, self.resolution, 1)),
             kr.layers.MaxPooling2D(pool_size=(2, 2)),
-            kr.layers.Conv2D(filters=64, kernel_size=3, activation='relu', input_shape=(24*4, self.resolution, 1)),
+            kr.layers.Conv2D(filters=64, kernel_size=3, activation='relu', input_shape=(self.timeSpreadPast, self.resolution, 1)),
             kr.layers.MaxPooling2D(pool_size=(2, 2)),
             kr.layers.Dropout(0.25),
             kr.layers.Flatten(),
@@ -86,5 +87,5 @@ if __name__ == '__main__':
     worker = PreprocessingWorker()
     cnnModel = CNNAI()
 
-    worker.processShortermHistoryData(span='15MIN', resolution=cnnModel.resolution, coreAmount=2)
+    worker.processShortermHistoryData(span='15MIN', resolution=cnnModel.resolution, timeSpreadPast=cnnModel.timeSpreadPast)
     cnnModel.train()
