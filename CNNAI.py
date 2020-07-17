@@ -41,7 +41,7 @@ class CNNAI():
             _graphData = pd.read_csv(f'{dirName}/graphData/{graphName}.csv', index_col=0)
             graphData[i, :, :] = _graphData.values.reshape(24*4, self.resolution)
             # print(f'{i} of {graphAmount}')
-        graphData = nu.random.permuation(graphData)
+        graphData = nu.random.permutation(graphData)
         graphData = graphData.reshape(-1, 24*4, self.resolution, 1)
         # start training precedure. First, preprocessing
         testSamplesAmount = int(graphData.shape[0] * testifyRadio)

@@ -12,6 +12,8 @@ import multiprocessing as mp
 # path = "BTC-JPY.csv"
 coinApiKeys = ["BF49F16C-E6CF-4B26-A22E-F32599C6E404", "F5F1D416-EAEF-4654-ADA9-D728E9C9A226", "4934D542-652A-46AB-A6A8-BFC8511B251A", "55256919-0DF4-45A0-B899-581C990D6E5E", "94483EBE-A1B9-49DC-8ED8-B35BC986A1A6", "AFA241C6-C5DE-4BD7-8033-4C7175F83A21", "BE9D33EB-F1BB-4435-9614-38EF94DF2C4F"]
 
+tempLabels = []
+
 class PreprocessingWorker():
     def __init__(self, determinateSigma=1.0):
         self.determinateSigma = determinateSigma  # 1.0 * sigma
@@ -81,7 +83,7 @@ class PreprocessingWorker():
             time.sleep(5)
 
 
-    def processShortermHistoryData(self, span='15MIN', shouldShowData=True, resolution=int(24*4), coreAmount=2):
+    def processShortermHistoryData(self, span='15MIN', shouldShowData=True, resolution=int(24*4), coreAmount=1):
         _start = dt.datetime.now()
         print('Start preprocessing history data ...')
         # general constants
@@ -103,16 +105,17 @@ class PreprocessingWorker():
                 _newData = _newData.drop(_newData.index[[-1]])
                 data = pd.concat([data, _newData])
             data = data.drop(['Volume', 'trades_count'], axis=1).dropna().reset_index(drop=True)
+            data['LabelCNNPost1'] = nu.nan
             del fileNames
             # calculate graphData and update label
             processTank = []
-            tAmountPerTime = int(data.index.values[int(24*4):-3].ravel().shape[0] / coreAmount)
+            tAmountPerTime = int(data.index.values[int(24*4):-27].ravel().shape[0] / coreAmount)
             ts = None
             for core in range(coreAmount):
                 if core != coreAmount-1:
                     ts = data.index.values[int(24*4 + core*tAmountPerTime):int(24*4 + (core+1)*tAmountPerTime)]
                 else:
-                    ts = data.index.values[int(24*4 + core*tAmountPerTime):]
+                    ts = data.index.values[int(24*4 + core*tAmountPerTime):-27]
                 process = mp.Process(target=generateGraphData, args=(data, ts, resolution, graphDataDir))
                 process.start()
                 processTank.append(process)
@@ -145,6 +148,8 @@ class PreprocessingWorker():
             #     graphData = pd.DataFrame(graphArray, index=data.loc[targetIndices[:-1], 'Date'])
             #     graphName = data.loc[t, 'Date'].split('.')[0].replace('T', '_').replace(':', '-')
             #     graphData.to_csv(f'{graphDataDir}/{graphName}.csv', index=True, header=True)
+            for index, label in tempLabels:
+                data.loc[index, 'LabelCNNPost1'] = label
             data.to_csv(storedFilePath, index=False, header=True)
 
             # self.__processData(data, storedFilePath, shouldShowData=True)
@@ -307,11 +312,12 @@ def generateGraphData(data, ts, resolution, graphDataDir):
         futureMiddle = (data.loc[t+1:t+25, 'High'].values.ravel().mean() + data.loc[t+1:t+25, 'Low'].values.ravel().mean())/2
         sigma = nu.abs((data.loc[t, 'High'] - data.loc[t, 'Low'])/(2.57*2))
         if futureMiddle >= nowMiddle + 0.84*sigma:
-            data.loc[t, 'LabelCNNPost1'] = 0
+            tempLabels.append((t, 0))
         elif futureMiddle >= nowMiddle - 0.84*sigma:
-            data.loc[t, 'LabelCNNPost1'] = 1
+            tempLabels.append((t, 0))
         else:
-            data.loc[t, 'LabelCNNPost1'] = 2
+            tempLabels.append((t, 0))
+            # data.loc[t, 'LabelCNNPost1'] = 2
 
         graphArray = nu.zeros((24*4, resolution), dtype=nu.int)
         for i, _t in enumerate(targetIndices[:-1]):
@@ -321,7 +327,6 @@ def generateGraphData(data, ts, resolution, graphDataDir):
         graphData = pd.DataFrame(graphArray, index=data.loc[targetIndices[:-1], 'Date'])
         graphName = data.loc[t, 'Date'].split('.')[0].replace('T', '_').replace(':', '-')
         graphData.to_csv(f'{graphDataDir}/{graphName}.csv', index=True, header=True)
-
 
 
 if __name__ == '__main__':
