@@ -133,9 +133,9 @@ class PreprocessingWorker():
                 nowMiddle = (data.loc[t, 'High'] + data.loc[t, 'Low'])/2
                 futureMiddle = (data.loc[t+1:t+timeSpreadFuture+1, 'High'].values.ravel().mean() + data.loc[t+1:t+timeSpreadFuture+1, 'Low'].values.ravel().mean())/2
                 sigma = nu.abs((data.loc[t, 'High'] - data.loc[t, 'Low'])/(1.96*2))
-                if futureMiddle >= nowMiddle + 0.84*sigma:
+                if futureMiddle >= nowMiddle + 1.0*sigma:
                     data.loc[t, 'LabelCNNPost1'] = 0
-                elif futureMiddle >= nowMiddle - 0.84*sigma:
+                elif futureMiddle >= nowMiddle - 1.0*sigma:
                     data.loc[t, 'LabelCNNPost1'] = 1
                 else:
                     data.loc[t, 'LabelCNNPost1'] = 2

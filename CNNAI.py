@@ -21,7 +21,7 @@ class CNNAI():
         self.modelPath = "cnnmodel.h5"
 
 
-    def train(self, testifyRadio=0.2, accuracyNeeded=0.3):
+    def train(self, testifyRadio=0.2, accuracyNeeded=0.4):
         _start = dt.datetime.now()
         # check if dir exists
         dirName = './LabeledData'
@@ -34,28 +34,28 @@ class CNNAI():
         path = f'{dirName}/{span}.csv'
         data = pd.read_csv(path).dropna().reset_index(drop=True)
         print('class probability:\n{}%'.format(data.groupby('LabelCNNPost1').size() / float(data.index.values.ravel().shape[0]) * 100))
-        graphAmount = len(data['Date'].values.ravel()[24*4:-300])
-        graphData = nu.zeros((graphAmount, 24*4, self.resolution), dtype=nu.int)
+        graphAmount = len(data['Date'].values.ravel()[self.timeSpreadPast:-300])
+        graphData = nu.zeros((graphAmount, self.timeSpreadPast, self.resolution), dtype=nu.int)
         # get graph
-        for i, dateString in enumerate(data['Date'].values.ravel()[24*4:-300]):
+        for i, dateString in enumerate(data['Date'].values.ravel()[self.timeSpreadPast:-300]):
             graphName = dateString.split('.')[0].replace('T', '_').replace(':', '-')
             _graphData = pd.read_csv(f'{dirName}/graphData/{graphName}.csv', index_col=0)
-            graphData[i, :, :] = _graphData.values.reshape(24*4, self.resolution)
+            graphData[i, :, :] = _graphData.values.reshape(self.timeSpreadPast, self.resolution)
             # print(f'{i} of {graphAmount}')
         graphData = nu.random.permutation(graphData)
-        graphData = graphData.reshape(-1, 24*4, self.resolution, 1)
+        graphData = graphData.reshape(-1, self.timeSpreadPast, self.resolution, 1)
         # start training precedure. First, preprocessing
         testSamplesAmount = int(graphData.shape[0] * testifyRadio)
         trainSamplesAmount = int(graphData.shape[0] - testSamplesAmount)
         trainSamples = graphData[:trainSamplesAmount, :, :, :]
-        trainLabels = data['LabelCNNPost1'].values[24*4:int(24*4+trainSamplesAmount)].reshape(-1, 1)
+        trainLabels = data['LabelCNNPost1'].values[self.timeSpreadPast:int(self.timeSpreadPast+trainSamplesAmount)].reshape(-1, 1)
         testSamples = graphData[trainSamplesAmount:, :, :, :]
-        testLabels = data['LabelCNNPost1'].values[int(24*4+trainSamplesAmount):-300].reshape(-1, 1)
+        testLabels = data['LabelCNNPost1'].values[int(self.timeSpreadPast+trainSamplesAmount):-300].reshape(-1, 1)
         print('Start training model ...')
         # Second, train until accuracy needed is achieved
         accuracy = 0
         while accuracy < accuracyNeeded:
-            self.model.fit(trainSamples, trainLabels.ravel(), epochs=5)
+            self.model.fit(trainSamples, trainLabels.ravel(), epochs=10)
             loss, accuracy = self.model.evaluate(testSamples, testLabels.ravel())
             if accuracy < accuracyNeeded:
                 print('Accuracy not enough, try again ...')
@@ -68,15 +68,15 @@ class CNNAI():
 
     def __buildModel(self):
         model = kr.models.Sequential([
-            kr.layers.Conv2D(filters=64, kernel_size=3, activation='relu', input_shape=(self.timeSpreadPast, self.resolution, 1)),
-            kr.layers.MaxPooling2D(pool_size=(2, 2)),
+            kr.layers.Conv2D(filters=64, kernel_size=5, activation='relu', input_shape=(self.timeSpreadPast, self.resolution, 1)),
+            kr.layers.MaxPooling2D(pool_size=(3, 3)),
             kr.layers.Conv2D(filters=64, kernel_size=3, activation='relu', input_shape=(self.timeSpreadPast, self.resolution, 1)),
             kr.layers.MaxPooling2D(pool_size=(2, 2)),
             kr.layers.Dropout(0.25),
             kr.layers.Flatten(),
-            kr.layers.Dense(100, activation='relu'),
+            kr.layers.Dense(50, activation='relu'),
             kr.layers.Dropout(0.25),
-            kr.layers.Dense(5, activation='softmax')
+            kr.layers.Dense(3, activation='softmax')
         ])
         model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
         return model
