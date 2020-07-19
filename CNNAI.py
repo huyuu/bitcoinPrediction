@@ -15,8 +15,8 @@ from PreprocessingWorker import PreprocessingWorker
 
 class CNNAI():
     def __init__(self):
-        self.resolution = int(24*4)
-        self.timeSpreadPast = int(24*2)
+        self.resolution = int(24*8)
+        self.timeSpreadPast = int(24*4)
         self.model = self.__buildModel()
         self.modelPath = "cnnmodel.h5"
 
@@ -70,10 +70,13 @@ class CNNAI():
     def __buildModel(self):
         model = kr.models.Sequential([
             kr.layers.Conv2D(filters=64, kernel_size=3, activation='relu', input_shape=(self.timeSpreadPast, self.resolution, 1)),
+            kr.layers.MaxPooling2D(pool_size=(4, 4)),
             kr.layers.Conv2D(filters=64, kernel_size=2, activation='relu', input_shape=(self.timeSpreadPast, self.resolution, 1)),
-            kr.layers.Dropout(0.2),
+            kr.layers.MaxPooling2D(pool_size=(2, 2)),
+            kr.layers.Dropout(0.25),
             kr.layers.Flatten(),
             kr.layers.Dense(50, activation='relu'),
+            kr.layers.Dropout(0.25),
             kr.layers.Dense(3, activation='softmax')
         ])
         model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
@@ -85,5 +88,5 @@ if __name__ == '__main__':
     worker = PreprocessingWorker()
     cnnModel = CNNAI()
 
-    # worker.processShortermHistoryData(span='15MIN', resolution=cnnModel.resolution, timeSpreadPast=cnnModel.timeSpreadPast)
+    worker.processShortermHistoryData(span='15MIN', resolution=cnnModel.resolution, timeSpreadPast=cnnModel.timeSpreadPast)
     cnnModel.train()
