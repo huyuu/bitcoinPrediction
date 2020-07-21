@@ -56,7 +56,7 @@ class CNNAI():
         # Second, train until accuracy needed is achieved
         accuracy = 0
         while accuracy < accuracyNeeded:
-            self.model.fit(trainSamples, trainLabels.ravel(), epochs=10)
+            self.model.fit(trainSamples, trainLabels.ravel(), epochs=100)
             loss, accuracy = self.model.evaluate(testSamples, testLabels.ravel())
             if accuracy < accuracyNeeded:
                 print('Accuracy not enough, try again ...')
@@ -88,5 +88,5 @@ if __name__ == '__main__':
     worker = PreprocessingWorker()
     cnnModel = CNNAI()
 
-    worker.processShortermHistoryData(span='15MIN', resolution=cnnModel.resolution, timeSpreadPast=cnnModel.timeSpreadPast)
+    # worker.processShortermHistoryData(span='15MIN', resolution=cnnModel.resolution, timeSpreadPast=cnnModel.timeSpreadPast)
     cnnModel.train()
