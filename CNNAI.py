@@ -9,7 +9,6 @@ from matplotlib import pyplot as pl
 import datetime as dt
 import os
 from tensorflow import keras as kr
-import seaborn as sns
 from PreprocessingWorker import PreprocessingWorker, dateToString
 
 
@@ -106,10 +105,11 @@ class CNNAI():
         self.__checkAndHandleLoadingModel()
 
         _minute = (now.minute // 15) * 15
-        t = data.loc[data['DateTypeDate'] == dt.datetime(now.year, now.month, now.day, now.hour, _minute, 0), :].index.values
+        _t = dt.datetime(now.year, now.month, now.day, now.hour, _minute, 0)
+        t = data.loc[data['DateTypeDate'] == _t, :].index.values
         # if data at now is not provided, break.
         if t.shape[0] == 0:
-            print('Current data not provided, skip prediction.')
+            print(f'Current data ({_t}) not provided, skip prediction.')
             return
         t = int(t[0])
         # if some middle data are missing, break.
@@ -117,8 +117,8 @@ class CNNAI():
             # print(data.loc[t-self.timeSpreadPast, 'DateTypeDate'])
             # print(data.loc[t-self.timeSpreadPast, 'DateTypeDate'] + dt.timedelta(minutes=(self.timeSpreadPast*15)))
             # print(data.loc[t, 'DateTypeDate'])
-            missingDataAmount = int((data.loc[t, 'DateTypeDate'] - data.loc[t-self.timeSpreadPast, 'DateTypeDate']).total_seconds() // (15*60) - self.timeSpreadPast)
-            print(f'{missingDataAmount} data are missing, skip prediction.')
+            print(f'Some data are missing, skip prediction.')
+            print(data[['Date', 'time_close', 'Close', 'DateTypeDate']].tail())
             return
         # enter normal prediction cycle.
         targetIndices = range(t+1-self.timeSpreadPast, t+1)

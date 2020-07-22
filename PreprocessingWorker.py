@@ -105,7 +105,7 @@ class PreprocessingWorker():
         # switch for span
         if span == '15MIN':
             if startDate != None:
-                fileNames = filter(lambda name: '.csv' in name and os.stat(f'{dirName}/{name}').st_size > 1, os.listdir(dirName))
+                fileNames = filter(lambda name: '.csv' in name and os.stat(f'{dirName}/{name}').st_size > 10, os.listdir(dirName))
                 fileNames = [ (name, dt.datetime.strptime(name.split('.csv')[0], '%Y_%m_%d_%H_%M')) for name in fileNames ]
                 fileNames = filter(lambda pair: pair[1] >= startDate, fileNames)
                 fileNames = sorted(fileNames, key=lambda pair: pair[1])
@@ -137,7 +137,7 @@ class PreprocessingWorker():
                 data.to_csv(storedFilePath, index=False, header=True)
 
             else:
-                fileNames = filter(lambda name: '.csv' in name and os.stat(f'{dirName}/{name}').st_size > 1, os.listdir(dirName))
+                fileNames = filter(lambda name: '.csv' in name and os.stat(f'{dirName}/{name}').st_size > 10, os.listdir(dirName))
                 fileNames = [ (name, dt.datetime.strptime(name.split('.csv')[0], '%Y_%m_%d_%H_%M')) for name in fileNames ]
                 fileNames = sorted(fileNames, key=lambda pair: pair[1])
                 # fetch data
@@ -247,7 +247,7 @@ class PreprocessingWorker():
 
     def downloadAndUpdateHistoryDataToLatest(self, shouldCalculateLabelsFromBegining):
         dirName = './HistoryData'
-        fileNames = filter(lambda name: '.csv' in name and os.stat(f'{dirName}/{name}').st_size > 1, os.listdir(dirName))
+        fileNames = filter(lambda name: '.csv' in name and os.stat(f'{dirName}/{name}').st_size > 10, os.listdir(dirName))
         fileNames = sorted([ (name, dt.datetime.strptime(name.split('.csv')[0], '%Y_%m_%d_%H_%M')) for name in fileNames ], key=lambda pair: pair[1])
         storedDirName = './LabeledData'
         storedFilePath = f'{storedDirName}/15MIN.csv'
