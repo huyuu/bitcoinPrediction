@@ -49,31 +49,40 @@ class PreprocessingWorker():
                     client = CoinAPIv1(key)
                     response = client.ohlcv_historical_data('BITFLYER_SPOT_BTC_JPY', {'period_id': '15MIN', 'time_start': _start.isoformat(), 'time_end': _end.isoformat()})
 
-            # if data of the specific min exists, update it.
-            if os.path.exists(filePath):
-                data = pd.read_csv(filePath)
-                responseData = pd.DataFrame(response)
-                responseData = responseData.rename(columns={
-                    'price_open': 'Open',
-                    'price_close': 'Close',
-                    'price_high': 'High',
-                    'price_low': 'Low',
-                    'volume_traded': 'Volume',
-                    'time_period_start': 'Date'
-                })
-                data = pd.concat([data, responseData])
-                del responseData
-            # if data of the date still not exists, create from the response.
-            else:
-                data = pd.DataFrame(response)
-                data = data.rename(columns={
-                    'price_open': 'Open',
-                    'price_close': 'Close',
-                    'price_high': 'High',
-                    'price_low': 'Low',
-                    'volume_traded': 'Volume',
-                    'time_period_start': 'Date'
-                })
+            # # if data of the specific min exists, update it.
+            # if os.path.exists(filePath):
+            #     data = pd.read_csv(filePath)
+            #     responseData = pd.DataFrame(response)
+            #     responseData = responseData.rename(columns={
+            #         'price_open': 'Open',
+            #         'price_close': 'Close',
+            #         'price_high': 'High',
+            #         'price_low': 'Low',
+            #         'volume_traded': 'Volume',
+            #         'time_period_start': 'Date'
+            #     })
+            #     data = pd.concat([data, responseData])
+            #     del responseData
+            # # if data of the date still not exists, create from the response.
+            # else:
+            #     data = pd.DataFrame(response)
+            #     data = data.rename(columns={
+            #         'price_open': 'Open',
+            #         'price_close': 'Close',
+            #         'price_high': 'High',
+            #         'price_low': 'Low',
+            #         'volume_traded': 'Volume',
+            #         'time_period_start': 'Date'
+            #     })
+            data = pd.DataFrame(response)
+            data = data.rename(columns={
+                'price_open': 'Open',
+                'price_close': 'Close',
+                'price_high': 'High',
+                'price_low': 'Low',
+                'volume_traded': 'Volume',
+                'time_period_start': 'Date'
+            })
             # save data
             data.to_csv(filePath, index=False)
             # prepare for next loop
@@ -82,14 +91,12 @@ class PreprocessingWorker():
             time.sleep(5)
 
 
-    def processShortermHistoryData(self, span='15MIN', shouldShowData=True, resolution=int(24*4), timeSpreadPast=int(24*4)):
+    def processShortermHistoryData(self, span='15MIN', startDate=None, shouldShowData=True, resolution=int(24*4), timeSpreadPast=int(24*4)):
         _start = dt.datetime.now()
         timeSpreadFuture = int(timeSpreadPast / 4)
         print('Start preprocessing history data ...')
         # general constants
         dirName = './HistoryData'
-        fileNames = filter(lambda name: '.csv' in name, os.listdir(dirName))
-        fileNames = sorted([ (name, dt.datetime.strptime(name.split('.csv')[0], '%Y_%m_%d_%H_%M')) for name in fileNames ], key=lambda pair: pair[1])
         storedDirName = './LabeledData'
         storedFilePath = f'{storedDirName}/{span}.csv'
         graphDataDir = f'./{storedDirName}/graphData'
@@ -97,64 +104,88 @@ class PreprocessingWorker():
             os.mkdir(graphDataDir)
         # switch for span
         if span == '15MIN':
-            # fetch data
-            name, date = fileNames[0]
-            data = pd.read_csv(f'{dirName}/{name}')
-            for name, date in fileNames[1:]:
-                _newData = pd.read_csv(f'{dirName}/{name}')
-                _newData = _newData.drop(_newData.index[[-1]])
-                data = pd.concat([data, _newData])
-            data = data.drop(['Volume', 'trades_count'], axis=1).dropna().reset_index(drop=True)
-            data['LabelCNNPost1'] = nu.nan
-            del fileNames
-            # processTank = []
-            # tAmountPerTime = int(data.index.values[int(24*4):-27].ravel().shape[0] / coreAmount)
-            # ts = None
-            # labelQueue = mp.SimpleQueue()
-            # for core in range(coreAmount):
-            #     if core != coreAmount-1:
-            #         ts = data.index.values[int(24*4 + core*tAmountPerTime):int(24*4 + (core+1)*tAmountPerTime)]
-            #     else:
-            #         ts = data.index.values[int(24*4 + core*tAmountPerTime):-27]
-            #     process = mp.Process(target=generateGraphData, args=(data, ts, resolution, graphDataDir, labelQueue))
-            #     process.start()
-            #     processTank.append(process)
-            # for process in processTank:
-            #     process.join()
-            # calculate graphData and update label
-            for t in data.index.values[timeSpreadPast:-timeSpreadFuture-2]:
-                targetIndices = range(t-timeSpreadPast +1, t+1 +1)
-                # highs = data.loc[targetIndices, 'High'].values.ravel()
-                # lows = data.loc[targetIndices, 'Low'].values.ravel()
-                top = data.loc[targetIndices, 'High'].max()
-                down = data.loc[targetIndices, 'Low'].min()
-                topDownArray = nu.linspace(down, top, resolution)
-                # find label
-                nowMiddle = (data.loc[t, 'High'] + data.loc[t, 'Low'])/2
-                futureMiddle = (data.loc[t+1:t+timeSpreadFuture+1, 'High'].values.ravel().mean() + data.loc[t+1:t+timeSpreadFuture+1, 'Low'].values.ravel().mean())/2
-                sigma = nu.abs((data.loc[t, 'High'] - data.loc[t, 'Low'])/(1.96*2))
-                if futureMiddle >= nowMiddle + 1.0*sigma:
-                    data.loc[t, 'LabelCNNPost1'] = 0
-                elif futureMiddle >= nowMiddle - 1.0*sigma:
-                    data.loc[t, 'LabelCNNPost1'] = 1
-                else:
-                    data.loc[t, 'LabelCNNPost1'] = 2
+            if startDate != None:
+                fileNames = filter(lambda name: '.csv' in name and os.stat(f'{dirName}/{name}').st_size > 1, os.listdir(dirName))
+                fileNames = [ (name, dt.datetime.strptime(name.split('.csv')[0], '%Y_%m_%d_%H_%M')) for name in fileNames ]
+                fileNames = filter(lambda pair: pair[1] >= startDate, fileNames)
+                fileNames = sorted(fileNames, key=lambda pair: pair[1])
+                # fetch old data
+                data = pd.read_csv(storedFilePath)
+                data['DateTypeDate'] = stringToDate(data['Date'].values.ravel())
+                # fetch new data
+                ts = nu.array([], dtype=nu.int)
+                for name, date in fileNames:
+                    newData = pd.read_csv(f'{dirName}/{name}')
+                    # drop last row
+                    newData = newData.drop(newData.index[[-1]])
+                    newData['DateTypeDate'] = stringToDate(newData['Date'].values.ravel())
+                    rowIndex = data.loc[data['Date'] == dateToString(date)].index.values
+                    if rowIndex.shape[0] != 0:
+                        newIndices = range(rowIndex[0], rowIndex[0] + newData.index.values.shape[0])
+                        for i, row in enumerate(newIndices):
+                            data.loc[row] = newData.loc[i]
+                        ts = nu.concatenate([ts, newIndices])
+                    else:
+                        newIndices = range(data.index.values.shape[0], data.index.values.shape[0] + newData.index.values.shape[0])
+                        for i, row in enumerate(newIndices):
+                            data.loc[row] = newData.loc[i]
+                        ts = nu.concatenate([ts, newIndices])
+                        data = data.sort_values('DateTypeDate').reset_index(drop=True)
+                # calculate graphData and label
+                data = generateGraphDataAndLabel(data=data, ts=ts, resolution=resolution, timeSpreadPast=int(timeSpreadPast), timeSpreadFuture=int(timeSpreadFuture), graphDataDir=graphDataDir)
+                del data['DateTypeDate']
+                data.to_csv(storedFilePath, index=False, header=True)
 
-                graphArray = nu.zeros((timeSpreadPast, resolution), dtype=nu.int)
-                for i, _t in enumerate(targetIndices[:-1]):
-                    lowerBound = data.loc[_t, 'Low']
-                    upperBound = data.loc[_t, 'High']
-                    graphArray[i, :] = nu.array([ True if lowerBound <= value <= upperBound else False for value in topDownArray ]) * 1
-                graphData = pd.DataFrame(graphArray, index=data.loc[targetIndices[:-1], 'Date'])
-                graphName = data.loc[t, 'Date'].split('.')[0].replace('T', '_').replace(':', '-')
-                graphData.to_csv(f'{graphDataDir}/{graphName}.csv', index=True, header=True)
-            # while not labelQueue.empty():
-            #     index, label = labelQueue.get()
-            #     data.loc[index, 'LabelCNNPost1'] = label
-            data.to_csv(storedFilePath, index=False, header=True)
+            else:
+                fileNames = filter(lambda name: '.csv' in name and os.stat(f'{dirName}/{name}').st_size > 1, os.listdir(dirName))
+                fileNames = [ (name, dt.datetime.strptime(name.split('.csv')[0], '%Y_%m_%d_%H_%M')) for name in fileNames ]
+                fileNames = sorted(fileNames, key=lambda pair: pair[1])
+                # fetch data
+                name, date = fileNames[0]
+                data = pd.read_csv(f'{dirName}/{name}')
+                for name, date in fileNames[1:]:
+                    _newData = pd.read_csv(f'{dirName}/{name}')
+                    _newData = _newData.drop(_newData.index[[-1]])
+                    data = pd.concat([data, _newData])
+                data = data.drop(['Volume', 'trades_count'], axis=1).dropna().reset_index(drop=True)
+                data['LabelCNNPost1'] = nu.nan
+                del fileNames
+                # calculate graphData and update label
+                data = generateGraphDataAndLabel(data=data, ts=data.index.values.ravel(), resolution=resolution, timeSpreadPast=int(timeSpreadPast), timeSpreadFuture=int(timeSpreadFuture), graphDataDir=graphDataDir)
+                # for t in data.index.values[timeSpreadPast:-timeSpreadFuture-2]:
+                #     if t-timeSpreadPast+1 in data.index.values:
+                #         if t+timeSpreadFuture in data.index.values:
+                #             # prepare for labeling
+                #             targetIndices = range(t-timeSpreadPast, t+1)
+                #             top = data.loc[targetIndices, 'High'].max()
+                #             down = data.loc[targetIndices, 'Low'].min()
+                #             topDownArray = nu.linspace(down, top, resolution)
+                #             # find label
+                #             nowMiddle = (data.loc[t, 'High'] + data.loc[t, 'Low'])/2
+                #             futureMiddle = (data.loc[t+1:t+timeSpreadFuture+1, 'High'].values.ravel().mean() + data.loc[t+1:t+timeSpreadFuture+1, 'Low'].values.ravel().mean())/2
+                #             sigma = nu.abs((data.loc[t, 'High'] - data.loc[t, 'Low'])/(1.96*2))
+                #             if futureMiddle >= nowMiddle + 1.0*sigma:
+                #                 data.loc[t, 'LabelCNNPost1'] = 0
+                #             elif futureMiddle >= nowMiddle - 1.0*sigma:
+                #                 data.loc[t, 'LabelCNNPost1'] = 1
+                #             else:
+                #                 data.loc[t, 'LabelCNNPost1'] = 2
+                #         else: # latest data which is unable to be labeled
+                #
+                #         # draw graph:
+                #         graphArray = nu.zeros((timeSpreadPast, resolution), dtype=nu.int)
+                #         for i, _t in enumerate(targetIndices[:-1]):
+                #             lowerBound = data.loc[_t, 'Low']
+                #             upperBound = data.loc[_t, 'High']
+                #             graphArray[i, :] = nu.array([ True if lowerBound <= value <= upperBound else False for value in topDownArray ]) * 1
+                #         graphData = pd.DataFrame(graphArray, index=data.loc[targetIndices[:-1], 'Date'])
+                #         graphName = data.loc[t, 'Date'].split('.')[0].replace('T', '_').replace(':', '-')
+                #         graphData.to_csv(f'{graphDataDir}/{graphName}.csv', index=True, header=True)
+                data.to_csv(storedFilePath, index=False, header=True)
 
         timeCost = (dt.datetime.now() - _start).total_seconds()
         print(f'History data preprocessing done with time cost: {timeCost} seconds')
+        return data
 
 
     def show(self, graphData, label):
@@ -214,35 +245,69 @@ class PreprocessingWorker():
         return data
 
 
-def generateGraphData(data, ts, resolution, graphDataDir, queue):
-    # calculate graphData and update label
+    def downloadAndUpdateHistoryDataToLatest(self, shouldCalculateLabelsFromBegining):
+        dirName = './HistoryData'
+        fileNames = filter(lambda name: '.csv' in name and os.stat(f'{dirName}/{name}').st_size > 1, os.listdir(dirName))
+        fileNames = sorted([ (name, dt.datetime.strptime(name.split('.csv')[0], '%Y_%m_%d_%H_%M')) for name in fileNames ], key=lambda pair: pair[1])
+        storedDirName = './LabeledData'
+        storedFilePath = f'{storedDirName}/15MIN.csv'
+        graphDataDir = f'./{storedDirName}/graphData'
+        # dowload data
+        start = fileNames[-2][1]
+        now = dt.datetime.utcnow()
+        # self.download15MinuteSpanData(start=start, end=now)
+        # calculate 15MIN.csv
+        if shouldCalculateLabelsFromBegining:
+            data = self.processShortermHistoryData(startDate=None)
+            return data
+        else:
+            data = self.processShortermHistoryData(startDate=start)
+            return data
+
+
+def generateGraphDataAndLabel(data, ts, resolution, timeSpreadPast, timeSpreadFuture, graphDataDir):
     for t in ts:
-        targetIndices = range(t-24*4 +1, t+1 +1)
-        # highs = data.loc[targetIndices, 'High'].values.ravel()
-        # lows = data.loc[targetIndices, 'Low'].values.ravel()
+        # if data down to -timeSpreadPast is not available, skip drawing graph.
+        if not t+1-timeSpreadPast in data.index.values:
+            continue
+        # if data up to +timeSpreadFuture is available, label it.
+        if t+timeSpreadFuture in data.index.values:
+            # prepare for labeling
+            nowMiddle = (data.loc[t, 'High'] + data.loc[t, 'Low'])/2
+            futureMiddle = (data.loc[t+1:t+1+timeSpreadFuture, 'High'].values.ravel().mean() + data.loc[t+1:t+1+timeSpreadFuture, 'Low'].values.ravel().mean())/2
+            sigma = nu.abs((data.loc[t, 'High'] - data.loc[t, 'Low'])/(1.96*2))
+            if futureMiddle >= nowMiddle + 1.0*sigma:
+                data.loc[t, 'LabelCNNPost1'] = 0
+            elif futureMiddle >= nowMiddle - 1.0*sigma:
+                data.loc[t, 'LabelCNNPost1'] = 1
+            else:
+                data.loc[t, 'LabelCNNPost1'] = 2
+        # draw graph:
+        targetIndices = range(t+1-timeSpreadPast, t+1)
         top = data.loc[targetIndices, 'High'].max()
         down = data.loc[targetIndices, 'Low'].min()
         topDownArray = nu.linspace(down, top, resolution)
-        # find label
-        nowMiddle = (data.loc[t, 'High'] + data.loc[t, 'Low'])/2
-        futureMiddle = (data.loc[t+1:t+25, 'High'].values.ravel().mean() + data.loc[t+1:t+25, 'Low'].values.ravel().mean())/2
-        sigma = nu.abs((data.loc[t, 'High'] - data.loc[t, 'Low'])/(2.57*2))
-        if futureMiddle >= nowMiddle + 0.84*sigma:
-            queue.put((t, 0))
-        elif futureMiddle >= nowMiddle - 0.84*sigma:
-            queue.put((t, 1))
-        else:
-            queue.put((t, 2))
-            # data.loc[t, 'LabelCNNPost1'] = 2
-
-        graphArray = nu.zeros((24*4, resolution), dtype=nu.int)
-        for i, _t in enumerate(targetIndices[:-1]):
+        graphArray = nu.zeros((timeSpreadPast, resolution), dtype=nu.int)
+        for i, _t in enumerate(targetIndices):
             lowerBound = data.loc[_t, 'Low']
             upperBound = data.loc[_t, 'High']
             graphArray[i, :] = nu.array([ True if lowerBound <= value <= upperBound else False for value in topDownArray ]) * 1
-        graphData = pd.DataFrame(graphArray, index=data.loc[targetIndices[:-1], 'Date'])
+        graphData = pd.DataFrame(graphArray, index=data.loc[targetIndices, 'Date'])
         graphName = data.loc[t, 'Date'].split('.')[0].replace('T', '_').replace(':', '-')
         graphData.to_csv(f'{graphDataDir}/{graphName}.csv', index=True, header=True)
+    return data
+
+
+def dateToString(date):
+    return date.strftime('%Y-%m-%d') + 'T' + date.strftime('%H:%M:%S') + '.0000000Z'
+
+
+def stringToDate(dateString):
+    if type(dateString) is nu.ndarray:
+        return nu.array([dt.datetime.strptime(d.split('.')[0].replace('T', '_').replace(':', '-'), "%Y-%m-%d_%H-%M-%S") for d in dateString])
+    else:
+        return dt.datetime.strptime(dateString.split('.')[0].replace('T', '_').replace(':', '-'), "%Y-%m-%d_%H-%M-%S")
+
 
 
 if __name__ == '__main__':
@@ -256,4 +321,6 @@ if __name__ == '__main__':
 
     # worker.dumpShortermDataIntoSpanData()
 
-    worker.processShortermHistoryData(span='15MIN')
+    # worker.processShortermHistoryData(span='15MIN')
+
+    worker.downloadAndUpdateHistoryDataToLatest(shouldCalculateLabelsFromBegining=False)

@@ -10,8 +10,9 @@ import queue as qu
 import os
 import pybitflyer as bf
 
-from NeuralNetworkAI import NeuralNetworkAI
-from PreprocessingWorker import PreprocessingWorker
+# from NeuralNetworkAI import NeuralNetworkAI
+from CNNAI import CNNAI
+from PreprocessingWorker import PreprocessingWorker, dateToString, stringToDate
 
 
 bitflyerBaseURL = 'https://api.bitflyer.com/v1/'
@@ -20,25 +21,23 @@ shouldContinue = True
 
 class TradingAgent():
     def __init__(self):
-        self.client = bf.API()
-        self.ai = NeuralNetworkAI()
         self.processes = []
 
 
     def run(self):
         responseQueue = mp.SimpleQueue()
         # run listen market process
-        process = mp.Process(target=listenMarketWithMinTimeSpan, args=(self.client, responseQueue))
+        process = mp.Process(target=listenMarketWithMinTimeSpan, args=(responseQueue,))
         process.start()
         self.processes.append(process)
-        # run translate accumulated responses process
-        process = mp.Process(target=translateAccumulatedResponses, args=(responseQueue,))
-        process.start()
-        self.processes.append(process)
-        # run predict now process
-        process = mp.Process(target=predictTheLatest15MIN)
-        process.start()
-        self.processes.append(process)
+        # # run translate accumulated responses process
+        # process = mp.Process(target=translateAccumulatedResponses, args=(responseQueue,))
+        # process.start()
+        # self.processes.append(process)
+        # # run predict now process
+        # process = mp.Process(target=predictTheLatest15MIN)
+        # process.start()
+        # self.processes.append(process)
 
         # main loop
         try:
@@ -48,6 +47,7 @@ class TradingAgent():
         except KeyboardInterrupt:
             print('Start ending process ...')
             shouldContinue = False
+            time.sleep(8)
             for process in self.processes:
                 process.terminate()
 
@@ -61,16 +61,62 @@ class TradingAgent():
             print('Shutting down ... (This may take several minutes)')
 
 
-def listenMarketWithMinTimeSpan(client, queue):
+def listenMarketWithMinTimeSpan(queue):
+    # preprocessing
+    client = bf.API()
+    ai = CNNAI()
+    # worker = PreprocessingWorker()
+    # data = worker.downloadAndUpdateHistoryDataToLatest(shouldCalculateLabelsFromBegining=False)
+    data = pd.read_csv('./LabeledData/15MIN.csv')
+    data['DateTypeDate'] = stringToDate(data['Date'].values.ravel())
+    # start listening market
     print('Start listening at bitflyer market in 5 second span ...')
     while True:
         if shouldContinue == False:
+            data = data.sort_values('DateTypeDate').reset_index(drop=True)
+            del data['DateTypeDate']
+            # data.to_csv('./LabeledData/15MIN.csv', index=False, header=True)
+            print('15MIN.csv updated.')
             return
-
+        # update current time
         now = dt.datetime.utcnow()
         if 0 <= float(now.second) % 5 < 1:
+            # get response
             response = client.ticker(product_code="BTC_JPY")
-            queue.put(response)
+            # get response time region
+            # responseTime = dt.datetime.strptime(response['timestamp'].split('.')[0].replace('T', '_').replace(':', '-'), '%Y-%m-%d_%H-%M-%S')
+            responseTime = now
+            responseTimeString = dateToString(responseTime)
+            _minute = (responseTime.minute // 15) * 15
+            responseTimeRegion = dateToString(dt.datetime(responseTime.year, responseTime.month, responseTime.day, responseTime.hour, _minute, 0))
+            # get current value
+            currentValue = response['ltp']
+            # search for response time region in data
+            rowIndex = data.loc[data['Date'] == responseTimeRegion].index
+            # if row exists, update; otherwise create one
+            if rowIndex.values.shape[0] != 0:
+                data.loc[rowIndex, 'time_close'] = responseTimeString
+                data.loc[rowIndex, 'High'] = max(data.loc[rowIndex, 'High'].values[0], currentValue)
+                data.loc[rowIndex, 'Low'] = min(data.loc[rowIndex, 'Low'].values[0], currentValue)
+                data.loc[rowIndex, 'Close'] = currentValue
+                # print(data.loc[rowIndex, ['time_open', 'time_close', 'High', 'Low']])
+            else:
+                # translate response to newData
+                newData = {
+                    'Date': responseTimeRegion,
+                    'time_period_end': dateToString(dt.datetime(responseTime.year, responseTime.month, responseTime.day, responseTime.hour, _minute, 0) + dt.timedelta(minutes=15)),
+                    'time_open': responseTimeString,
+                    'time_close': responseTimeString,
+                    'Open': currentValue,
+                    'High': currentValue,
+                    'Low': currentValue,
+                    'Close': currentValue,
+                    'DateTypeDate': responseTime
+                }
+                data = data.append(newData, ignore_index=True)
+            # predict
+            ai.predictFromCurrentData(data, now, graphDataDir='./StoredData')
+            # queue.put(response)
             time.sleep(1)
         else:
             time.sleep(0.5)

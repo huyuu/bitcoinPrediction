@@ -10,7 +10,7 @@ import datetime as dt
 import os
 from tensorflow import keras as kr
 import seaborn as sns
-from PreprocessingWorker import PreprocessingWorker
+from PreprocessingWorker import PreprocessingWorker, dateToString
 
 
 class CNNAI():
@@ -18,6 +18,7 @@ class CNNAI():
         self.resolution = int(24*8)
         self.timeSpreadPast = int(24*4)
         self.model = self.__buildModel()
+        self.isModelLoaded = False
         self.modelPath = "cnnmodel.h5"
 
 
@@ -67,6 +68,75 @@ class CNNAI():
         print(f'Model training ends with accuracy {accuracy}. (time cost: {timeCost} seconds)')
 
 
+    def showModelBreviation(self):
+        # get valid model
+        self.__checkAndHandleLoadingModel()
+        data = pd.read_csv('./LabeledData/15MIN.csv').dropna().reset_index(drop=True)
+        # set target time
+        targetTime = dt.datetime(2020, 7, 10, 0, 0, 0)
+        # targetTime = dt.datetime(2020, 7, 13, 18, 0, 0)
+        # get graph data
+        graphDataName = targetTime.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
+        graphDataPath = f'./LabeledData/graphData/{graphDataName}'
+        # check if path exists.
+        if not os.path.exists(graphDataPath):
+            print(f"{graphDataPath} doesn't exist.")
+        # get plot data
+        graphData = pd.read_csv(graphDataPath, index_col=0)
+        dateString = targetTime.strftime('%Y-%m-%d') + 'T' + targetTime.strftime('%H:%M:%S') + '.0000000Z'
+        label = int(data.loc[data['Date'] == dateString, 'LabelCNNPost1'].values[0])
+        t = data.loc[data['Date'] == dateString, 'LabelCNNPost1'].index
+        timeSpreadFuture = int(self.timeSpreadPast / 4)
+        graphDataFutureName = data.loc[t+timeSpreadFuture, 'Date'].values[0].split('.')[0].replace('T', '_').replace(':', '-') + '.csv'
+        graphDataFuture = pd.read_csv(f'./LabeledData/graphData/{graphDataFutureName}', index_col=0)
+        plotData = nu.rot90(nu.concatenate([graphData.values, graphDataFuture.values[-timeSpreadFuture:, :]]))
+        # get prediction
+        prediction = self.model.predict(graphData.values.reshape(1, self.timeSpreadPast, self.resolution, 1))[0]
+
+        terms = ['+', '0', '-']
+        pl.title('Prediction: +: {:.3g}%, 0: {:.3g}%, -: {:.3g}% (Actually {})'.format(prediction[0]*100, prediction[1]*100, prediction[2]*100, terms[label]), fontsize=26)
+        pl.xlabel('Date', fontsize=22)
+        pl.ylabel('Value', fontsize=22)
+        pl.imshow(plotData, cmap = 'gray')
+        pl.plot((graphData.shape[0]-1)*nu.ones(10), nu.linspace(0, graphData.shape[1]-1, 10), '--', c='Red')
+        pl.show()
+
+
+    def predictFromCurrentData(self, data, now, graphDataDir='./StoredData'):
+        self.__checkAndHandleLoadingModel()
+
+        _minute = (now.minute // 15) * 15
+        t = data.loc[data['DateTypeDate'] == dt.datetime(now.year, now.month, now.day, now.hour, _minute, 0), :].index.values
+        # if data at now is not provided, break.
+        if t.shape[0] == 0:
+            print('Current data not provided, skip prediction.')
+            return
+        t = int(t[0])
+        # if some middle data are missing, break.
+        if data.loc[t-self.timeSpreadPast, 'DateTypeDate'] + dt.timedelta(minutes=(self.timeSpreadPast*15)) != data.loc[t, 'DateTypeDate']:
+            print(data.loc[t-self.timeSpreadPast, 'DateTypeDate'])
+            print(data.loc[t-self.timeSpreadPast, 'DateTypeDate'] + dt.timedelta(minutes=(self.timeSpreadPast*15)))
+            print(data.loc[t, 'DateTypeDate'])
+            print('Some data are missing, skip prediction.')
+            return
+        # enter normal prediction cycle.
+        targetIndices = range(t+1-self.timeSpreadPast, t+1)
+        top = data.loc[targetIndices, 'High'].max()
+        bottom = data.loc[targetIndices, 'Low'].min()
+        topBottomArray = nu.linspace(bottom, top, self.resolution)
+        graphArray = nu.zeros((self.timeSpreadPast, self.resolution), dtype=nu.int)
+        for i, _t in enumerate(targetIndices):
+            lowerBound = data.loc[_t, 'Low']
+            upperBound = data.loc[_t, 'High']
+            graphArray[i, :] = nu.array([ True if lowerBound <= value <= upperBound else False for value in topBottomArray ]) * 1
+        # save graphData
+        graphData = pd.DataFrame(graphArray, index=data.loc[targetIndices, 'Date'])
+        graphName = data.loc[t, 'Date'].split('.')[0].replace('T', '_').replace(':', '-')
+        # graphData.to_csv(f'{graphDataDir}/{graphName}.csv', index=True, header=True)
+        prediction = self.model.predict(graphArray.reshape(1, self.timeSpreadPast, self.resolution, 1))[0]
+        print('@UTC {} Prediction: + (+:{:.3g}%, 0:{:.3g}%, -:{:.3g}%)'.format(now.strftime('%Y-%m-%d %H:%M:%S'), prediction[0]*100, prediction[1]*100, prediction[2]*100))
+
+
     def __buildModel(self):
         model = kr.models.Sequential([
             kr.layers.Conv2D(filters=64, kernel_size=3, activation='relu', input_shape=(self.timeSpreadPast, self.resolution, 1)),
@@ -81,6 +151,13 @@ class CNNAI():
         ])
         model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
         return model
+
+
+    def __checkAndHandleLoadingModel(self):
+        if not self.isModelLoaded:
+            if os.path.exists(self.modelPath):
+                self.model = kr.models.load_model(self.modelPath)
+                self.isModelLoaded = True
 
 
 
