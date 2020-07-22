@@ -255,7 +255,7 @@ class PreprocessingWorker():
         # dowload data
         start = fileNames[-2][1]
         now = dt.datetime.utcnow()
-        # self.download15MinuteSpanData(start=start, end=now)
+        self.download15MinuteSpanData(start=start, end=now)
         # calculate 15MIN.csv
         if shouldCalculateLabelsFromBegining:
             data = self.processShortermHistoryData(startDate=None)
@@ -305,6 +305,7 @@ def dateToString(date):
 def stringToDate(dateString):
     if type(dateString) is nu.ndarray:
         return nu.array([dt.datetime.strptime(d.split('.')[0].replace('T', '_').replace(':', '-'), "%Y-%m-%d_%H-%M-%S") for d in dateString])
+
     else:
         return dt.datetime.strptime(dateString.split('.')[0].replace('T', '_').replace(':', '-'), "%Y-%m-%d_%H-%M-%S")
 

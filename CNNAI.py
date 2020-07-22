@@ -114,10 +114,11 @@ class CNNAI():
         t = int(t[0])
         # if some middle data are missing, break.
         if data.loc[t-self.timeSpreadPast, 'DateTypeDate'] + dt.timedelta(minutes=(self.timeSpreadPast*15)) != data.loc[t, 'DateTypeDate']:
-            print(data.loc[t-self.timeSpreadPast, 'DateTypeDate'])
-            print(data.loc[t-self.timeSpreadPast, 'DateTypeDate'] + dt.timedelta(minutes=(self.timeSpreadPast*15)))
-            print(data.loc[t, 'DateTypeDate'])
-            print('Some data are missing, skip prediction.')
+            # print(data.loc[t-self.timeSpreadPast, 'DateTypeDate'])
+            # print(data.loc[t-self.timeSpreadPast, 'DateTypeDate'] + dt.timedelta(minutes=(self.timeSpreadPast*15)))
+            # print(data.loc[t, 'DateTypeDate'])
+            missingDataAmount = int((data.loc[t, 'DateTypeDate'] - data.loc[t-self.timeSpreadPast, 'DateTypeDate']).total_seconds() // (15*60) - self.timeSpreadPast)
+            print(f'{missingDataAmount} data are missing, skip prediction.')
             return
         # enter normal prediction cycle.
         targetIndices = range(t+1-self.timeSpreadPast, t+1)
@@ -132,7 +133,7 @@ class CNNAI():
         # save graphData
         graphData = pd.DataFrame(graphArray, index=data.loc[targetIndices, 'Date'])
         graphName = data.loc[t, 'Date'].split('.')[0].replace('T', '_').replace(':', '-')
-        # graphData.to_csv(f'{graphDataDir}/{graphName}.csv', index=True, header=True)
+        graphData.to_csv(f'{graphDataDir}/{graphName}.csv', index=True, header=True)
         prediction = self.model.predict(graphArray.reshape(1, self.timeSpreadPast, self.resolution, 1))[0]
         print('@UTC {} Prediction: + (+:{:.3g}%, 0:{:.3g}%, -:{:.3g}%)'.format(now.strftime('%Y-%m-%d %H:%M:%S'), prediction[0]*100, prediction[1]*100, prediction[2]*100))
 

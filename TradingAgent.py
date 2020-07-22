@@ -63,11 +63,13 @@ class TradingAgent():
 
 def listenMarketWithMinTimeSpan(queue):
     # preprocessing
+    saveAt = 5  # 5 a.m. local time
+    _now = dt.datetime.utcnow()
+    saveTime = dt.datetime(_now.year, _now.month, _now.day, saveAt-9+24, 0, 0)
     client = bf.API()
     ai = CNNAI()
-    # worker = PreprocessingWorker()
-    # data = worker.downloadAndUpdateHistoryDataToLatest(shouldCalculateLabelsFromBegining=False)
-    data = pd.read_csv('./LabeledData/15MIN.csv')
+    worker = PreprocessingWorker()
+    data = worker.downloadAndUpdateHistoryDataToLatest(shouldCalculateLabelsFromBegining=False)
     data['DateTypeDate'] = stringToDate(data['Date'].values.ravel())
     # start listening market
     print('Start listening at bitflyer market in 5 second span ...')
@@ -111,11 +113,18 @@ def listenMarketWithMinTimeSpan(queue):
                     'High': currentValue,
                     'Low': currentValue,
                     'Close': currentValue,
-                    'DateTypeDate': responseTime
+                    'DateTypeDate': dt.datetime(responseTime.year, responseTime.month, responseTime.day, responseTime.hour, _minute, 0)
                 }
                 data = data.append(newData, ignore_index=True)
             # predict
             ai.predictFromCurrentData(data, now, graphDataDir='./StoredData')
+            # check if should save
+            if abs((now-saveTime).total_seconds()) <= 10:
+                data = data.sort_values('DateTypeDate').reset_index(drop=True)
+                del data['DateTypeDate']
+                data.to_csv('./LabeledData/15MIN.csv', index=False, header=True)
+                print('15MIN.csv updated.')
+                saveTime += dt.timedelta(days=1)
             # queue.put(response)
             time.sleep(1)
         else:
