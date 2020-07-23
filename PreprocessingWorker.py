@@ -92,7 +92,7 @@ class PreprocessingWorker():
             time.sleep(5)
 
 
-    def processShortermHistoryData(self, span='15MIN', startDate=None, shouldShowData=True, resolution, timeSpreadPast):
+    def processShortermHistoryData(self, resolution, timeSpreadPast, span='15MIN', startDate=None, shouldShowData=True):
         _start = dt.datetime.now()
         timeSpreadFuture = int(timeSpreadPast / 4)
         print('Start preprocessing history data ...')
