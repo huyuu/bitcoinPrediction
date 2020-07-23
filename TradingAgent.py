@@ -82,6 +82,10 @@ def listenMarketWithMinTimeSpan(queue):
         if 0 <= float(now.second) % 5 < 1:
             # get response
             response = client.ticker(product_code="BTC_JPY")
+            # if access failed, continue
+            if not timestamp in response:
+                time.sleep(2)
+                continue
             # get response time region
             responseTime = dt.datetime.strptime(response['timestamp'].split('.')[0].replace('T', '_').replace(':', '-'), '%Y-%m-%d_%H-%M-%S')
             responseTimeString = dateToString(responseTime)
@@ -113,11 +117,9 @@ def listenMarketWithMinTimeSpan(queue):
                 data = data.append(newData, ignore_index=True)
             # predict
             ai.predictFromCurrentData(data, now, graphDataDir='./StoredData')
-            # check if should save
-            if now.minute < 1:
-                data = data.sort_values('DateTypeDate').reset_index(drop=True)
-                data.to_csv('./LabeledData/15MIN.csv', columns=['Date', 'time_period_end', 'time_open', 'time_close', 'Open', 'High', 'Low', 'Close', 'LabelCNNPost1'], index=False, header=True)
-                print('15MIN.csv updated.')
+            # save every time
+            data = data.sort_values('DateTypeDate').reset_index(drop=True)
+            data.to_csv('./LabeledData/15MIN.csv', columns=['Date', 'time_period_end', 'time_open', 'time_close', 'Open', 'High', 'Low', 'Close', 'LabelCNNPost1'], index=False, header=True)
             # queue.put(response)
             time.sleep(1)
         else:
