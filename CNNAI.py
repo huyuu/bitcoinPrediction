@@ -113,7 +113,7 @@ class CNNAI():
             return
         t = int(t[0])
         # if some middle data are missing, break.
-        if data.loc[t-self.timeSpreadPast, 'DateTypeDate'] + dt.timedelta(minutes=(self.timeSpreadPast*15)) != data.loc[t, 'DateTypeDate']:
+        if data.loc[t, 'DateTypeDate'] - data.loc[t-self.timeSpreadPast, 'DateTypeDate'] >= dt.timedelta(minutes=(int(self.timeSpreadPast*1.5)*15)):
             # print(data.loc[t-self.timeSpreadPast, 'DateTypeDate'])
             # print(data.loc[t-self.timeSpreadPast, 'DateTypeDate'] + dt.timedelta(minutes=(self.timeSpreadPast*15)))
             # print(data.loc[t, 'DateTypeDate'])
