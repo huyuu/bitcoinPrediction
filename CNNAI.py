@@ -33,10 +33,9 @@ class CNNAI():
         span = '15MIN'
         path = f'{dirName}/{span}.csv'
         data = pd.read_csv(path).dropna().reset_index(drop=True)
-        data = data.drop(data.index[:self.timeSpreadPast]).drop(data.index[-300:]).reset_index(drop=True)
         data = data.reindex(nu.random.permutation(data.index)).reset_index(drop=True)
         print('class probability:\n{}%'.format(data.groupby('LabelCNNPost1').size() / float(data.index.values.ravel().shape[0]) * 100))
-        graphAmount = len(data['Date'].values.ravel())
+        graphAmount = data.index.values.ravel().shape[0]
         graphData = nu.zeros((graphAmount, self.timeSpreadPast, self.resolution), dtype=nu.int)
         # get graph
         for i, dateString in enumerate(data['Date'].values.ravel()):
@@ -44,7 +43,7 @@ class CNNAI():
             _graphData = pd.read_csv(f'{dirName}/graphData/{graphName}.csv', index_col=0)
             graphData[i, :, :] = _graphData.values.reshape(self.timeSpreadPast, self.resolution)
             # print(f'{i} of {graphAmount}')
-        graphData = graphData.reshape(-1, self.timeSpreadPast, self.resolution, 1)
+        graphData = graphData.reshape(graphAmount, self.timeSpreadPast, self.resolution, 1)
         # start training precedure. First, preprocessing
         testSamplesAmount = int(graphData.shape[0] * testifyRadio)
         trainSamplesAmount = int(graphData.shape[0] - testSamplesAmount)

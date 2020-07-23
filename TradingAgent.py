@@ -83,7 +83,7 @@ def listenMarketWithMinTimeSpan(queue):
             # get response
             response = client.ticker(product_code="BTC_JPY")
             # if access failed, continue
-            if not timestamp in response:
+            if not 'timestamp' in response:
                 time.sleep(2)
                 continue
             # get response time region
