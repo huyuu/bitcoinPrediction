@@ -63,12 +63,9 @@ class TradingAgent():
 
 def listenMarketWithMinTimeSpan(queue):
     # preprocessing
-    saveAt = 5  # 5 a.m. local time
-    _now = dt.datetime.utcnow()
-    saveTime = dt.datetime(_now.year, _now.month, _now.day, _now.hour, 30, 0) + dt.timedelta(hours=1)
     client = bf.API()
     ai = CNNAI()
-    worker = PreprocessingWorker()
+    worker = PreprocessingWorker(resolution=ai.resolution, timeSpreadPast=ai.timeSpreadPast)
     data = worker.downloadAndUpdateHistoryDataToLatest(shouldCalculateLabelsFromBegining=False)
     data['DateTypeDate'] = stringToDate(data['Date'].values.ravel())
     # start listening market
@@ -117,7 +114,7 @@ def listenMarketWithMinTimeSpan(queue):
             # predict
             ai.predictFromCurrentData(data, now, graphDataDir='./StoredData')
             # check if should save
-            if abs(now.minute) < 1:
+            if now.minute < 1:
                 data = data.sort_values('DateTypeDate').reset_index(drop=True)
                 data.to_csv('./LabeledData/15MIN.csv', columns=['Date', 'time_period_end', 'time_open', 'time_close', 'Open', 'High', 'Low', 'Close', 'LabelCNNPost1'], index=False, header=True)
                 print('15MIN.csv updated.')

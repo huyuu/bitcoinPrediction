@@ -14,8 +14,9 @@ coinApiKeys = ["BF49F16C-E6CF-4B26-A22E-F32599C6E404", "F5F1D416-EAEF-4654-ADA9-
 
 
 class PreprocessingWorker():
-    def __init__(self, determinateSigma=1.0):
-        self.determinateSigma = determinateSigma  # 1.0 * sigma
+    def __init__(self, resolution, timeSpreadPast):
+        self.resolution = resolution
+        self.timeSpreadPast = timeSpreadPast
 
 
     # reference: https://note.com/mman/n/n7cccd8bb8961
@@ -91,7 +92,7 @@ class PreprocessingWorker():
             time.sleep(5)
 
 
-    def processShortermHistoryData(self, span='15MIN', startDate=None, shouldShowData=True, resolution=int(24*4), timeSpreadPast=int(24*4)):
+    def processShortermHistoryData(self, span='15MIN', startDate=None, shouldShowData=True, resolution, timeSpreadPast):
         _start = dt.datetime.now()
         timeSpreadFuture = int(timeSpreadPast / 4)
         print('Start preprocessing history data ...')
@@ -258,10 +259,10 @@ class PreprocessingWorker():
         self.download15MinuteSpanData(start=start, end=now)
         # calculate 15MIN.csv
         if shouldCalculateLabelsFromBegining:
-            data = self.processShortermHistoryData(startDate=None)
+            data = self.processShortermHistoryData(startDate=None, resolution=self.resolution, timeSpreadPast=self.timeSpreadPast)
             return data
         else:
-            data = self.processShortermHistoryData(startDate=start)
+            data = self.processShortermHistoryData(startDate=start, resolution=self.resolution, timeSpreadPast=self.timeSpreadPast)
             return data
 
 
@@ -276,9 +277,9 @@ def generateGraphDataAndLabel(data, ts, resolution, timeSpreadPast, timeSpreadFu
             nowMiddle = (data.loc[t, 'High'] + data.loc[t, 'Low'])/2
             futureMiddle = (data.loc[t+1:t+1+timeSpreadFuture, 'High'].values.ravel().mean() + data.loc[t+1:t+1+timeSpreadFuture, 'Low'].values.ravel().mean())/2
             sigma = nu.abs((data.loc[t, 'High'] - data.loc[t, 'Low'])/(1.96*2))
-            if futureMiddle >= nowMiddle + 1.0*sigma:
+            if futureMiddle > nowMiddle + 1.96*sigma:
                 data.loc[t, 'LabelCNNPost1'] = 0
-            elif futureMiddle >= nowMiddle - 1.0*sigma:
+            elif futureMiddle >= nowMiddle - 1.96*sigma:
                 data.loc[t, 'LabelCNNPost1'] = 1
             else:
                 data.loc[t, 'LabelCNNPost1'] = 2

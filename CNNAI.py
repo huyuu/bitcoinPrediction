@@ -70,30 +70,36 @@ class CNNAI():
     def showModelBreviation(self):
         # get valid model
         self.__checkAndHandleLoadingModel()
-        data = pd.read_csv('./LabeledData/15MIN.csv').dropna().reset_index(drop=True)
+        data = pd.read_csv('./LabeledData/15MIN.csv')
         # set target time
-        targetTime = dt.datetime(2020, 7, 10, 0, 0, 0)
-        # targetTime = dt.datetime(2020, 7, 13, 18, 0, 0)
+        targetTime = dt.datetime(2020, 7, 23, 0, 0, 0)
         # get graph data
         graphDataName = targetTime.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
         graphDataPath = f'./LabeledData/graphData/{graphDataName}'
         # check if path exists.
         if not os.path.exists(graphDataPath):
             print(f"{graphDataPath} doesn't exist.")
-        # get plot data
+        # get current data
         graphData = pd.read_csv(graphDataPath, index_col=0)
+        plotData = nu.rot90(graphData.values)
+        # if label available, get future data
         dateString = targetTime.strftime('%Y-%m-%d') + 'T' + targetTime.strftime('%H:%M:%S') + '.0000000Z'
-        label = int(data.loc[data['Date'] == dateString, 'LabelCNNPost1'].values[0])
-        t = data.loc[data['Date'] == dateString, 'LabelCNNPost1'].index
+        t = data.loc[data['Date'] == dateString, :].index.values[0]
         timeSpreadFuture = int(self.timeSpreadPast / 4)
-        graphDataFutureName = data.loc[t+timeSpreadFuture, 'Date'].values[0].split('.')[0].replace('T', '_').replace(':', '-') + '.csv'
-        graphDataFuture = pd.read_csv(f'./LabeledData/graphData/{graphDataFutureName}', index_col=0)
-        plotData = nu.rot90(nu.concatenate([graphData.values, graphDataFuture.values[-timeSpreadFuture:, :]]))
+        if int(t+timeSpreadFuture) in data.index.values:
+            graphDataFutureName = data.loc[t+timeSpreadFuture, 'Date'].values[0].split('.')[0].replace('T', '_').replace(':', '-') + '.csv'
+            graphDataFuture = pd.read_csv(f'./LabeledData/graphData/{graphDataFutureName}', index_col=0)
+            plotData = nu.rot90(nu.concatenate([graphData.values, graphDataFuture.values[-timeSpreadFuture:, :]]))
         # get prediction
+        print(graphData.shape)
         prediction = self.model.predict(graphData.values.reshape(1, self.timeSpreadPast, self.resolution, 1))[0]
 
-        terms = ['+', '0', '-']
-        pl.title('Prediction: +: {:.3g}%, 0: {:.3g}%, -: {:.3g}% (Actually {})'.format(prediction[0]*100, prediction[1]*100, prediction[2]*100, terms[label]), fontsize=26)
+        if data.loc[data['Date'] == dateString, 'LabelCNNPost1'].values.shape[0] != 0:
+            terms = ['+', '0', '-']
+            label = data.loc[data['Date'] == dateString, 'LabelCNNPost1'].values[0]
+            pl.title('Prediction: +: {:.3g}%, 0: {:.3g}%, -: {:.3g}% (Actually {})'.format(prediction[0]*100, prediction[1]*100, prediction[2]*100, terms[label]), fontsize=26)
+        else:
+            pl.title('Prediction: +: {:.3g}%, 0: {:.3g}%, -: {:.3g}%'.format(prediction[0]*100, prediction[1]*100, prediction[2]*100), fontsize=26)
         pl.xlabel('Date', fontsize=22)
         pl.ylabel('Value', fontsize=22)
         pl.imshow(plotData, cmap = 'gray')
@@ -168,3 +174,4 @@ if __name__ == '__main__':
 
     # worker.processShortermHistoryData(span='15MIN', resolution=cnnModel.resolution, timeSpreadPast=cnnModel.timeSpreadPast)
     cnnModel.train()
+    # cnnModel.showModelBreviation()
