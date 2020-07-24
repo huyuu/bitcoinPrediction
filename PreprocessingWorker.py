@@ -49,7 +49,19 @@ class PreprocessingWorker():
                     print(f'Trying new key: {key} ...')
                     client = CoinAPIv1(key)
                     response = client.ohlcv_historical_data('BITFLYER_SPOT_BTC_JPY', {'period_id': '15MIN', 'time_start': _start.isoformat(), 'time_end': _end.isoformat()})
-
+            # if BITFLYER data not available, try BITBANK
+            if type(response) is list and len(response) <= self.timeSpreadPast/2:
+                try:
+                    response = client.ohlcv_historical_data('BITBANK_SPOT_BTC_JPY', {'period_id': '15MIN', 'time_start': _start.isoformat(), 'time_end': _end.isoformat()})
+                except HTTPError as error:
+                    if error.code == 429:
+                        if len(coinApiKeys) == 0:
+                            break
+                        print(f'Key: {key} is used out for today.')
+                        key = coinApiKeys.pop()
+                        print(f'Trying new key: {key} ...')
+                        client = CoinAPIv1(key)
+                        response = client.ohlcv_historical_data('BITBANK_SPOT_BTC_JPY', {'period_id': '15MIN', 'time_start': _start.isoformat(), 'time_end': _end.isoformat()})
             # # if data of the specific min exists, update it.
             # if os.path.exists(filePath):
             #     data = pd.read_csv(filePath)
