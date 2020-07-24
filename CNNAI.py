@@ -9,7 +9,7 @@ from matplotlib import pyplot as pl
 import datetime as dt
 import os
 from tensorflow import keras as kr
-from PreprocessingWorker import PreprocessingWorker, dateToString
+from PreprocessingWorker import PreprocessingWorker, dateToString, stringToDate
 
 
 class CNNAI():
@@ -33,7 +33,8 @@ class CNNAI():
         span = '15MIN'
         path = f'{dirName}/{span}.csv'
         data = pd.read_csv(path).dropna().reset_index(drop=True)
-        data = data.reindex(nu.random.permutation(data.index)).reset_index(drop=True)
+        # latest data is unstable, should be dropped.
+        data = data.drop(data.index[-self.timeSpreadPast:]).reindex(nu.random.permutation(data.index)).reset_index(drop=True)
         print('class probability:\n{}%'.format(data.groupby('LabelCNNPost1').size() / float(data.index.values.ravel().shape[0]) * 100))
         graphAmount = data.index.values.ravel().shape[0]
         graphData = nu.zeros((graphAmount, self.timeSpreadPast, self.resolution), dtype=nu.int)
@@ -66,15 +67,16 @@ class CNNAI():
         print(f'Model training ends with accuracy {accuracy}. (time cost: {timeCost} seconds)')
 
 
-    def showModelBreviation(self):
+    def showModelBreviation(self, graphDataDir):
         # get valid model
         self.__checkAndHandleLoadingModel()
         data = pd.read_csv('./LabeledData/15MIN.csv')
         # set target time
-        targetTime = dt.datetime(2020, 7, 23, 0, 0, 0)
+        # targetTime = dt.datetime(2020, 7, 23, 0, 0, 0)
+        targetTime = stringToDate(data.loc[data.index.values.shape[0]-1, 'Date'])
         # get graph data
         graphDataName = targetTime.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
-        graphDataPath = f'./LabeledData/graphData/{graphDataName}'
+        graphDataPath = f'{graphDataDir}/{graphDataName}'
         # check if path exists.
         if not os.path.exists(graphDataPath):
             print(f"{graphDataPath} doesn't exist.")
@@ -87,15 +89,14 @@ class CNNAI():
         timeSpreadFuture = int(self.timeSpreadPast / 4)
         if int(t+timeSpreadFuture) in data.index.values:
             graphDataFutureName = data.loc[t+timeSpreadFuture, 'Date'].values[0].split('.')[0].replace('T', '_').replace(':', '-') + '.csv'
-            graphDataFuture = pd.read_csv(f'./LabeledData/graphData/{graphDataFutureName}', index_col=0)
+            graphDataFuture = pd.read_csv(f'{graphDataDir}/{graphDataFutureName}', index_col=0)
             plotData = nu.rot90(nu.concatenate([graphData.values, graphDataFuture.values[-timeSpreadFuture:, :]]))
         # get prediction
-        print(graphData.shape)
         prediction = self.model.predict(graphData.values.reshape(1, self.timeSpreadPast, self.resolution, 1))[0]
 
-        if data.loc[data['Date'] == dateString, 'LabelCNNPost1'].values.shape[0] != 0:
+        if data.loc[data['Date'] == dateString, 'LabelCNNPost1'].values.ravel()[0] in nu.array([0, 1.0, 2.0]):
             terms = ['+', '0', '-']
-            label = data.loc[data['Date'] == dateString, 'LabelCNNPost1'].values[0]
+            label = int(data.loc[data['Date'] == dateString, 'LabelCNNPost1'].values[0])
             pl.title('Prediction: +: {:.3g}%, 0: {:.3g}%, -: {:.3g}% (Actually {})'.format(prediction[0]*100, prediction[1]*100, prediction[2]*100, terms[label]), fontsize=26)
         else:
             pl.title('Prediction: +: {:.3g}%, 0: {:.3g}%, -: {:.3g}%'.format(prediction[0]*100, prediction[1]*100, prediction[2]*100), fontsize=26)
@@ -106,7 +107,7 @@ class CNNAI():
         pl.show()
 
 
-    def predictFromCurrentData(self, data, now, graphDataDir='./StoredData'):
+    def predictFromCurrentData(self, data, now, shouldSaveGraph, graphDataDir='./StoredData'):
         self.__checkAndHandleLoadingModel()
 
         _minute = (now.minute // 15) * 15
@@ -140,7 +141,17 @@ class CNNAI():
         graphName = data.loc[t, 'Date'].split('.')[0].replace('T', '_').replace(':', '-')
         graphData.to_csv(f'{graphDataDir}/{graphName}.csv', index=True, header=True)
         prediction = self.model.predict(graphArray.reshape(1, self.timeSpreadPast, self.resolution, 1))[0]
-        print('@UTC {} Prediction: + (+:{:.3g}%, 0:{:.3g}%, -:{:.3g}%)'.format(now.strftime('%Y-%m-%d %H:%M:%S'), prediction[0]*100, prediction[1]*100, prediction[2]*100))
+        terms = ['+', '=', '-']
+        print('@UTC {} Prediction: {} (+:{:.3g}%, =:{:.3g}%, -:{:.3g}%)'.format(now.strftime('%Y-%m-%d %H:%M:%S'), terms[nu.argmax(prediction)], prediction[0]*100, prediction[1]*100, prediction[2]*100))
+        # save graph
+        if shouldSaveGraph:
+            fig = pl.figure()
+            pl.title('@UTC {} Prediction: {} (+:{:.3g}%, 0:{:.3g}%, -:{:.3g}%)'.format(now.strftime('%Y-%m-%d %H:%M:%S'), terms[nu.argmax(prediction)], prediction[0]*100, prediction[1]*100, prediction[2]*100), fontsize=24)
+            pl.xlabel('Date', fontsize=22)
+            pl.ylabel('Value', fontsize=22)
+            pl.imshow(nu.rot90(graphArray), cmap = 'gray')
+            fig.savefig('latestPrediction.png')
+            pl.close(fig)
 
 
     def __buildModel(self):
@@ -171,6 +182,6 @@ if __name__ == '__main__':
     cnnModel = CNNAI()
     worker = PreprocessingWorker(resolution=cnnModel.resolution, timeSpreadPast=cnnModel.timeSpreadPast)
 
-    worker.processShortermHistoryData(span='15MIN', resolution=cnnModel.resolution, timeSpreadPast=cnnModel.timeSpreadPast)
-    cnnModel.train()
-    # cnnModel.showModelBreviation()
+    # worker.processShortermHistoryData(span='15MIN', resolution=cnnModel.resolution, timeSpreadPast=cnnModel.timeSpreadPast)
+    #  cnnModel.train()
+    cnnModel.showModelBreviation(graphDataDir='./StoredData')

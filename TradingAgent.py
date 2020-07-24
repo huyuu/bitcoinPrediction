@@ -115,10 +115,11 @@ def listenMarketWithMinTimeSpan(queue, shouldStop):
                 }
                 data = data.append(newData, ignore_index=True)
             # predict
-            ai.predictFromCurrentData(data, now, graphDataDir='./StoredData')
+            ai.predictFromCurrentData(data, now, shouldSaveGraph=True, graphDataDir='./StoredData')
             # save every time
-            # data = data.sort_values('DateTypeDate').reset_index(drop=True)
-            # data.to_csv('./LabeledData/15MIN.csv', columns=['Date', 'time_period_end', 'time_open', 'time_close', 'Open', 'High', 'Low', 'Close', 'LabelCNNPost1'], index=False, header=True)
+            if now.minute < 1:
+                data = data.sort_values('DateTypeDate').reset_index(drop=True)
+                data.to_csv('./LabeledData/15MIN.csv', columns=['Date', 'time_period_end', 'time_open', 'time_close', 'Open', 'High', 'Low', 'Close', 'LabelCNNPost1'], index=False, header=True)
             # queue.put(response)
             time.sleep(1)
         else:
