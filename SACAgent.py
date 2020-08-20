@@ -143,8 +143,8 @@ tf_agent.initialize()
 print('SAC Agent Created.')
 
 # policies
-evaluationPolicy = greedy_policy.GreedyPolicy(tf_agent.policy)
-collectingPolicy = tf_agent.collect_policy
+evaluate_policy = greedy_policy.GreedyPolicy(tf_agent.policy)
+collect_policy = tf_agent.collect_policy
 
 # metrics and evaluation
 def compute_avg_return(environment, policy, num_episodes=5):
@@ -196,7 +196,7 @@ collect_driver.run = common.function(collect_driver.run)
 # Reset the train step
 tf_agent.train_step_counter.assign(0)
 # Evaluate the agent's policy once before training.
-avg_return = compute_avg_return(eval_env, eval_policy, num_eval_episodes)
+avg_return = compute_avg_return(eval_env, evaluate_policy, num_eval_episodes)
 returns = [avg_return]
 # Main training process
 dataset = replay_buffer.as_dataset(num_parallel_calls=3, sample_batch_size=batch_size, num_steps=2).prefetch(3)
@@ -212,6 +212,6 @@ for _ in range(num_iterations):
     if step % log_interval == 0:
         print('step = {0}: loss = {1}'.format(step, train_loss.loss))
     if step % eval_interval == 0:
-        avg_return = compute_avg_return(eval_env, eval_policy, num_eval_episodes)
+        avg_return = compute_avg_return(eval_env, evaluate_policy, num_eval_episodes)
         print('step = {0}: Average Return = {1}'.format(step, avg_return))
     returns.append(avg_return)
