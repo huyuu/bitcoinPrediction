@@ -26,16 +26,17 @@ from PreprocessingWorker import stringToDate, dateToString
 # Model
 
 class BTC_JPY_Environment(py_environment.PyEnvironment):
-    def __init__(self, imageWidth, imageHeight, initialAsset):
-        self.__actionSpec = BoundedArraySpec(shape=(2,), dtype=nu.float, minimum=-1, maximum=1, name='action')
+    def __init__(self, imageWidth, imageHeight, initialAsset, dtype=nu.float32):
+        self.dtype = dtype
+        self.__actionSpec = BoundedArraySpec(shape=(2,), dtype=self.dtype, minimum=-1, maximum=1, name='action')
         # https://www.tensorflow.org/agents/api_docs/python/tf_agents/environments/py_environment/PyEnvironment#observation_spec
         # https://www.tensorflow.org/agents/api_docs/python/tf_agents/typing/types/NestedArraySpec
-        self.__observationSpec = (BoundedArraySpec(shape=(imageWidth, imageHeight), dtype=nu.float, minimum=0, maximum=1, name='observation_market'), BoundedArraySpec(shape=(1,), dtype=nu.float, minimum=0, maximum=1, name='observation_holdingRate'))
+        self.__observationSpec = (BoundedArraySpec(shape=(imageWidth, imageHeight), dtype=self.dtype, minimum=0, maximum=1, name='observation_market'), BoundedArraySpec(shape=(1,), dtype=self.dtype, minimum=0, maximum=1, name='observation_holdingRate'))
         self.holdingBTC = 0
         self.holdingJPY = initialAsset
         self.initialAsset = initialAsset
         self.holdingRate = 0.0
-        self.currentState = (nu.zeros((imageWidth, imageHeight), dtype=nu.float), nu.array([self.holdingRate], dtype=nu.float))
+        self.currentState = (nu.zeros((imageWidth, imageHeight), dtype=self.dtype), nu.array([self.holdingRate], dtype=self.dtype))
         self.currentPrice = 0.0
 
         self.imageWidth = imageWidth
@@ -72,9 +73,9 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         _graphDir = './LabeledData/graphData'
         _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
         marketSnapshot = pd.read_csv(_graphPath, index_col=0).values
-        marketSnapshot.dtype = nu.float
+        marketSnapshot.dtype = self.dtype
         # self.currentState = nu.append(marketSnapshot, self.holdingRate)
-        self.currentState = (marketSnapshot, nu.array([self.holdingRate], dtype=nu.float))
+        self.currentState = (marketSnapshot, nu.array([self.holdingRate], dtype=self.dtype))
         self.episodeCount = 0
         return ts.restart(self.currentState)
 
@@ -101,7 +102,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         _graphDir = './LabeledData/graphData'
         _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
         nextMarketSnapshot = pd.read_csv(_graphPath, index_col=0).values
-        nextMarketSnapshot.dtype = nu.float
+        nextMarketSnapshot.dtype = self.dtype
         # get next holding rate according to specific action taken
         price = self.currentPrice * (1+action[1])
         exchangeIndicator = action[0]
@@ -125,7 +126,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             pass  # do nothing if deltaHoldingRate == 0
         assert 0 <= self.holdingRate <= 1
         # concate marketData and holdingRate to make currentState
-        self.currentState = (nextMarketSnapshot, nu.array([self.holdingRate], dtype=nu.float))
+        self.currentState = (nextMarketSnapshot, nu.array([self.holdingRate], dtype=self.dtype))
         return ts.transition(self.currentState, reward=0, discount=1.0)
 
 

@@ -38,7 +38,7 @@ action_spec = env.action_spec()
 
 # Hyperparameters
 
-batchSize = int(4*24)
+batchSize = int(4*24/2)
 
 criticLearningRate = 3e-4
 actorLearningRate = 3e-4
