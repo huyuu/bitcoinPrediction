@@ -42,7 +42,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         self.imageWidth = imageWidth
         self.imageHeight = imageHeight
 
-        self.data = pd.read_csv('./LabeledData/15MIN.csv')
+        self.data = pd.read_csv('./LabeledData/15MIN.csv').dropna(axis=1)
         self.data['DateTypeDate'] = stringToDate(self.data['Date'].values.ravel())
         self.possibleStartDate = [ pd.Timestamp(nu_date).to_pydatetime() for nu_date in self.data.iloc[:-int(4*24*31*3), :].loc[:, 'DateTypeDate'].values.ravel() ]
         startDate = nu.random.choice(self.possibleStartDate)
@@ -73,7 +73,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         _graphDir = './LabeledData/graphData'
         _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
         marketSnapshot = pd.read_csv(_graphPath, index_col=0).values
-        marketSnapshot.dtype = self.dtype
+        marketSnapshot = marketSnapshot.astype(self.dtype)
         # self.currentState = nu.append(marketSnapshot, self.holdingRate)
         self.currentState = (marketSnapshot, nu.array([self.holdingRate], dtype=self.dtype))
         self.episodeCount = 0
@@ -102,7 +102,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         _graphDir = './LabeledData/graphData'
         _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
         nextMarketSnapshot = pd.read_csv(_graphPath, index_col=0).values
-        nextMarketSnapshot.dtype = self.dtype
+        nextMarketSnapshot = nextMarketSnapshot.astype(self.dtype)
         # get next holding rate according to specific action taken
         price = self.currentPrice * (1+action[1])
         exchangeIndicator = action[0]
