@@ -31,7 +31,6 @@ from BitcoinEnvironment import BTC_JPY_Environment
 # create environment and transfer it to Tensorflow version
 _env = BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000)
 env = tf_py_environment.TFPyEnvironment(_env)
-_ = env.reset()
 evaluate_env = tf_py_environment.TFPyEnvironment(BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000))
 observation_spec = env.observation_spec()
 action_spec = env.action_spec()
@@ -39,7 +38,7 @@ action_spec = env.action_spec()
 
 # Hyperparameters
 
-batchSize = int(4*24/2)
+batchSize = int(4*24)
 
 criticLearningRate = 3e-4
 actorLearningRate = 3e-4
@@ -56,9 +55,9 @@ critic_commonDenseLayerParams = [int(observation_spec[0].shape[0]//2)]
 # actor_convLayerParams = [(96, 3, 1), (24, 3, 1)]
 actor_denseLayerParams = [int(observation_spec[0].shape[0]//2)]
 
-replayBufferCapacity = 100
-
-warmupEpisodes = 80
+_storeYears = 2
+replayBufferCapacity = int(batchSize * _storeYears)
+warmupEpisodes = _storeYears * 4
 
 
 
@@ -166,10 +165,10 @@ def compute_avg_return(environment, policy, num_episodes=5):
 # https://www.google.com/url?client=internal-element-cse&cx=016807462989910793636:iigazrvgr1m&q=https://www.tensorflow.org/agents/api_docs/python/tf_agents/replay_buffers/tf_uniform_replay_buffer/TFUniformReplayBuffer&sa=U&ved=2ahUKEwivq9qvnaTrAhXMdXAKHf2nBQYQFjAAegQIBBAB&usg=AOvVaw2elqEhFKUSZf8WeAl53gVK
 replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
     data_spec=tf_agent.collect_data_spec,
-    batch_size=env.batch_size,
+    batch_size=batchSize,
     max_length=replayBufferCapacity
 )
-print('Replay Buffer Created')
+print('Replay Buffer Created, start warming-up ...')
 
 # driver for warm-up
 # https://www.tensorflow.org/agents/api_docs/python/tf_agents/drivers/dynamic_episode_driver/DynamicEpisodeDriver
