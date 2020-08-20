@@ -29,9 +29,10 @@ from BitcoinEnvironment import BTC_JPY_Environment
 # Environment
 
 # create environment and transfer it to Tensorflow version
-env = BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000)
-env = tf_py_environment.TFPyEnvironment(env)
-eval_env = tf_py_environment.TFPyEnvironment(BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000))
+_env = BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000)
+env = tf_py_environment.TFPyEnvironment(_env)
+_ = env.reset()
+evaluate_env = tf_py_environment.TFPyEnvironment(BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000))
 observation_spec = env.observation_spec()
 action_spec = env.action_spec()
 
@@ -185,7 +186,7 @@ print('Replay Buffer Warm-up Done.')
 # Training
 
 collect_driver = dynamic_episode_driver.DynamicEpisodeDriver(
-    train_env,
+    env,
     collect_policy,
     observers=[replay_buffer.add_batch],
     num_episodes=1
@@ -196,10 +197,10 @@ collect_driver.run = common.function(collect_driver.run)
 # Reset the train step
 tf_agent.train_step_counter.assign(0)
 # Evaluate the agent's policy once before training.
-avg_return = compute_avg_return(eval_env, evaluate_policy, num_eval_episodes)
+avg_return = compute_avg_return(evaluate_env, evaluate_policy, num_eval_episodes)
 returns = [avg_return]
 # Main training process
-dataset = replay_buffer.as_dataset(num_parallel_calls=3, sample_batch_size=batch_size, num_steps=2).prefetch(3)
+dataset = replay_buffer.as_dataset(num_parallel_calls=50, sample_batch_size=batchSize, num_steps=2).prefetch(3)
 iterator = iter(dataset)
 print('Start training...')
 for _ in range(num_iterations):
@@ -212,6 +213,6 @@ for _ in range(num_iterations):
     if step % log_interval == 0:
         print('step = {0}: loss = {1}'.format(step, train_loss.loss))
     if step % eval_interval == 0:
-        avg_return = compute_avg_return(eval_env, evaluate_policy, num_eval_episodes)
+        avg_return = compute_avg_return(evaluate_env, evaluate_policy, num_eval_episodes)
         print('step = {0}: Average Return = {1}'.format(step, avg_return))
     returns.append(avg_return)
