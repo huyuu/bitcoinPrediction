@@ -55,9 +55,9 @@ critic_commonDenseLayerParams = [int(observation_spec[0].shape[0]//2), int(obser
 # actor_convLayerParams = [(96, 3, 1), (24, 3, 1)]
 actor_denseLayerParams = [int(observation_spec[0].shape[0]//2), int(observation_spec[0].shape[0]//2)]
 
-replayBufferCapacity = 100000000
+replayBufferCapacity = 100
 
-warmupEpisodes = 100
+warmupEpisodes = 80
 
 
 
@@ -87,9 +87,10 @@ critic_net = value_network.ValueNetwork(
     preprocessing_combiner=kr.layers.Concatenate(axis=-1),
     conv_layer_params=None,
     fc_layer_params=critic_commonDenseLayerParams,
-    dtype=tf.float64,
+    dtype=tf.float32,
     name='Critic Network'
 )
+print('Critic Network Created.')
 
 # create Actor Network
 def normal_projection_net(action_spec,init_means_output_factor=0.1):
@@ -115,10 +116,11 @@ actor_net = actor_distribution_network.ActorDistributionNetwork(
     ),
     preprocessing_combiner=kr.layers.Concatenate(axis=-1),
     fc_layer_params=actor_denseLayerParams,
-    dtype=tf.float64,
+    dtype=tf.float32,
     continuous_projection_net=normal_projection_net,
     name='ActorDistributionNetwork'
 )
+print('Actor Network Created.')
 
 # create SAC Agent
 # https://www.tensorflow.org/agents/api_docs/python/tf_agents/agents/SacAgent
@@ -138,6 +140,7 @@ tf_agent = sac_agent.SacAgent(
     train_step_counter=global_step
 )
 tf_agent.initialize()
+print('SAC Agent Created.')
 
 # policies
 evaluationPolicy = greedy_policy.GreedyPolicy(tf_agent.policy)
@@ -165,6 +168,7 @@ replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
     batch_size=env.batch_size,
     max_length=replayBufferCapacity
 )
+print('Replay Buffer Created')
 
 # driver for warm-up
 # https://www.tensorflow.org/agents/api_docs/python/tf_agents/drivers/dynamic_episode_driver/DynamicEpisodeDriver
@@ -175,6 +179,7 @@ initial_collect_driver = dynamic_episode_driver.DynamicEpisodeDriver(
     num_episodes=warmupEpisodes
 )
 initial_collect_driver.run()
+print('Replay Buffer Warm-up Done.')
 
 
 # Training
