@@ -17,6 +17,7 @@ from tf_agents.environments import tf_py_environment
 from tf_agents.eval import metric_utils
 from tf_agents.metrics import tf_metrics
 from tf_agents.networks import actor_distribution_network, normal_projection_network, value_network
+from tf_agents.networks.actor_distribution_network import _normal_projection_net
 from tf_agents.policies import greedy_policy, random_tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.trajectories import trajectory
@@ -51,9 +52,9 @@ target_update_tau = 0.005
 # (num_units, kernel_size, stride)
 # critic_observationConvLayerParams = [(24, 3, 1), (24, 3, 1)]
 # critic_observationDenseLayerParams = [int(env.observation_spec()[0].shape[0]//2), int(env.observation_spec()[0].shape[0]//2)]
-critic_commonDenseLayerParams = [int(observation_spec[0].shape[0]//2), int(observation_spec[0].shape[0]//2)]
+critic_commonDenseLayerParams = [int(observation_spec[0].shape[0]//2)]
 # actor_convLayerParams = [(96, 3, 1), (24, 3, 1)]
-actor_denseLayerParams = [int(observation_spec[0].shape[0]//2), int(observation_spec[0].shape[0]//2)]
+actor_denseLayerParams = [int(observation_spec[0].shape[0]//2)]
 
 replayBufferCapacity = 100
 
@@ -93,15 +94,15 @@ critic_net = value_network.ValueNetwork(
 print('Critic Network Created.')
 
 # create Actor Network
-def normal_projection_net(action_spec,init_means_output_factor=0.1):
-    return normal_projection_network.NormalProjectionNetwork(
-        action_spec,
-        mean_transform=None,
-        state_dependent_std=True,
-        init_means_output_factor=init_means_output_factor,
-        std_transform=sac_agent.std_clip_transform,
-        scale_distribution=True
-    )
+# def normal_projection_net(action_spec):
+#     return normal_projection_network.NormalProjectionNetwork(
+#         action_spec,
+#         mean_transform=None,
+#         state_dependent_std=True,
+#         init_means_output_factor=0.1,
+#         std_transform=sac_agent.std_clip_transform,
+#         scale_distribution=True
+#     )
 # https://www.tensorflow.org/agents/api_docs/python/tf_agents/networks/actor_distribution_network/ActorDistributionNetwork
 actor_net = actor_distribution_network.ActorDistributionNetwork(
     input_tensor_spec=observation_spec,
@@ -117,7 +118,6 @@ actor_net = actor_distribution_network.ActorDistributionNetwork(
     preprocessing_combiner=kr.layers.Concatenate(axis=-1),
     fc_layer_params=actor_denseLayerParams,
     dtype=tf.float32,
-    continuous_projection_net=normal_projection_net,
     name='ActorDistributionNetwork'
 )
 print('Actor Network Created.')
