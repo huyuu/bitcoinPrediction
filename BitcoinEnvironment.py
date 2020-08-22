@@ -27,7 +27,7 @@ from PreprocessingWorker import stringToDate, dateToString
 # Model
 
 class BTC_JPY_Environment(py_environment.PyEnvironment):
-    def __init__(self, imageWidth, imageHeight, initialAsset, dtype=nu.float32):
+    def __init__(self, imageWidth, imageHeight, initialAsset, dtype=nu.float32, isHugeMemorryMode=True):
         self.dtype = dtype
         self.__actionSpec = BoundedArraySpec(shape=(2,), dtype=self.dtype, minimum=-1, maximum=1, name='action')
         # https://www.tensorflow.org/agents/api_docs/python/tf_agents/environments/py_environment/PyEnvironment#observation_spec
@@ -52,7 +52,11 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         self.episodeCount = 0
         self.episodeEndSteps = 4*24*30*3
 
-        self.graphData = { path: pd.read_csv(f'./LabeledData/graphData/{path}', index_col=0).values for path in os.listdir('./LabeledData/graphData') if path.split('.')[1] == 'csv' }
+        self.isHugeMemorryMode = isHugeMemorryMode
+        if isHugeMemorryMode:
+            self.graphData = { path: pd.read_csv(f'./LabeledData/graphData/{path}', index_col=0).values for path in os.listdir('./LabeledData/graphData') if path.split('.')[1] == 'csv' }
+        else:
+            self.graphData = None
 
 
     # required
@@ -75,8 +79,10 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         # get next market snapshot
         _graphDir = './LabeledData/graphData'
         _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
-        # marketSnapshot = pd.read_csv(_graphPath, index_col=0).values
-        marketSnapshot = self.graphData['_graphPath']
+        if self.isHugeMemorryMode:
+            marketSnapshot = self.graphData['_graphPath']
+        else:
+            marketSnapshot = pd.read_csv(_graphPath, index_col=0).values
         assert marketSnapshot != None
         marketSnapshot = marketSnapshot.astype(self.dtype)
         # self.currentState = nu.append(marketSnapshot, self.holdingRate)
@@ -106,8 +112,10 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         # get next market snapshot
         _graphDir = './LabeledData/graphData'
         _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
-        # nextMarketSnapshot = pd.read_csv(_graphPath, index_col=0).values
-        nextMarketSnapshot = self.graphData['_graphPath']
+        if self.isHugeMemorryMode:
+            nextMarketSnapshot = self.graphData['_graphPath']
+        else:
+            nextMarketSnapshot = pd.read_csv(_graphPath, index_col=0).values
         nextMarketSnapshot = nextMarketSnapshot.astype(self.dtype)
         # get next holding rate according to specific action taken
         price = self.currentPrice * (1+action[1])

@@ -29,11 +29,13 @@ from BitcoinEnvironment import BTC_JPY_Environment
 # Environment
 
 # create environment and transfer it to Tensorflow version
-_env = BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000)
-env = tf_py_environment.TFPyEnvironment(_env)
-evaluate_env = tf_py_environment.TFPyEnvironment(BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000))
+print('Creating environment ...')
+env = BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=True)
+env = tf_py_environment.TFPyEnvironment(env)
+evaluate_env = tf_py_environment.TFPyEnvironment(BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=False))
 observation_spec = env.observation_spec()
 action_spec = env.action_spec()
+print('Environment created.')
 
 
 # Hyperparameters
