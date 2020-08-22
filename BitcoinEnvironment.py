@@ -59,7 +59,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
 
         self.isHugeMemorryMode = isHugeMemorryMode
         if isHugeMemorryMode:
-            with mp.Pool(processes=4) as pool:
+            with mp.Pool(processes=min(mp.cpu_count()-1, 8)) as pool:
                 files = list(filter(lambda path: path.split('.')[1] == 'csv', os.listdir('./LabeledData/graphData')))
                 self.graphData = pool.map(getGraphData, files)
                 self.graphData = { data[0]: data[1] for data in self.graphData }
@@ -93,7 +93,6 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         else:
             _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
             marketSnapshot = pd.read_csv(_graphPath, index_col=0).values
-        assert marketSnapshot != None
         marketSnapshot = marketSnapshot.astype(self.dtype)
         # self.currentState = nu.append(marketSnapshot, self.holdingRate)
         self.currentState = (marketSnapshot, nu.array([self.holdingRate], dtype=self.dtype))
