@@ -8,6 +8,7 @@ import tensorflow as tf
 import numpy as nu
 import pandas as pd
 import datetime as dt
+import os
 # tensorflows
 from tf_agents.environments import py_environment
 from tf_agents.environments import tf_environment
@@ -51,6 +52,8 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         self.episodeCount = 0
         self.episodeEndSteps = 4*24*30*3
 
+        self.graphData = { path: pd.read_csv(f'./LabeledData/graphData/{path}', index_col=0).values for path in os.listdir('./LabeledData/graphData') if path.split('.')[1] == 'csv' }
+
 
     # required
     def action_spec(self):
@@ -72,7 +75,9 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         # get next market snapshot
         _graphDir = './LabeledData/graphData'
         _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
-        marketSnapshot = pd.read_csv(_graphPath, index_col=0).values
+        # marketSnapshot = pd.read_csv(_graphPath, index_col=0).values
+        marketSnapshot = self.graphData['_graphPath']
+        assert marketSnapshot != None
         marketSnapshot = marketSnapshot.astype(self.dtype)
         # self.currentState = nu.append(marketSnapshot, self.holdingRate)
         self.currentState = (marketSnapshot, nu.array([self.holdingRate], dtype=self.dtype))
@@ -101,7 +106,8 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         # get next market snapshot
         _graphDir = './LabeledData/graphData'
         _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
-        nextMarketSnapshot = pd.read_csv(_graphPath, index_col=0).values
+        # nextMarketSnapshot = pd.read_csv(_graphPath, index_col=0).values
+        nextMarketSnapshot = self.graphData['_graphPath']
         nextMarketSnapshot = nextMarketSnapshot.astype(self.dtype)
         # get next holding rate according to specific action taken
         price = self.currentPrice * (1+action[1])

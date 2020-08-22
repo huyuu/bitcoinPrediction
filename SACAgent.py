@@ -57,7 +57,8 @@ actor_denseLayerParams = [int(observation_spec[0].shape[0]//2)]
 
 _storeYears = 2
 replayBufferCapacity = int(batchSize * _storeYears)
-warmupEpisodes = _storeYears * 4
+warmupEpisodes = int(_storeYears * 4)
+validateEpisodes = 4
 
 
 
@@ -165,7 +166,7 @@ def compute_avg_return(environment, policy, num_episodes=5):
 # https://www.google.com/url?client=internal-element-cse&cx=016807462989910793636:iigazrvgr1m&q=https://www.tensorflow.org/agents/api_docs/python/tf_agents/replay_buffers/tf_uniform_replay_buffer/TFUniformReplayBuffer&sa=U&ved=2ahUKEwivq9qvnaTrAhXMdXAKHf2nBQYQFjAAegQIBBAB&usg=AOvVaw2elqEhFKUSZf8WeAl53gVK
 replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
     data_spec=tf_agent.collect_data_spec,
-    batch_size=batchSize,
+    batch_size=env.batch_size,
     max_length=replayBufferCapacity
 )
 print('Replay Buffer Created, start warming-up ...')
@@ -196,10 +197,10 @@ collect_driver.run = common.function(collect_driver.run)
 # Reset the train step
 tf_agent.train_step_counter.assign(0)
 # Evaluate the agent's policy once before training.
-avg_return = compute_avg_return(evaluate_env, evaluate_policy, num_eval_episodes)
+avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
 returns = [avg_return]
 # Main training process
-dataset = replay_buffer.as_dataset(num_parallel_calls=50, sample_batch_size=batchSize, num_steps=2).prefetch(3)
+dataset = replay_buffer.as_dataset(num_parallel_calls=3, sample_batch_size=batchSize, num_steps=2).prefetch(3)
 iterator = iter(dataset)
 print('Start training...')
 for _ in range(num_iterations):
