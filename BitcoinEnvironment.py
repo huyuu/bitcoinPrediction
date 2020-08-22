@@ -9,6 +9,7 @@ import numpy as nu
 import pandas as pd
 import datetime as dt
 import os
+import multiprocessing as mp
 # tensorflows
 from tf_agents.environments import py_environment
 from tf_agents.environments import tf_environment
@@ -25,6 +26,10 @@ from PreprocessingWorker import stringToDate, dateToString
 
 
 # Model
+
+def getGraphData(path):
+    return (path, pd.read_csv(f'./LabeledData/graphData/{path}', index_col=0).values)
+
 
 class BTC_JPY_Environment(py_environment.PyEnvironment):
     def __init__(self, imageWidth, imageHeight, initialAsset, dtype=nu.float32, isHugeMemorryMode=True):
@@ -54,7 +59,11 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
 
         self.isHugeMemorryMode = isHugeMemorryMode
         if isHugeMemorryMode:
-            self.graphData = { path: pd.read_csv(f'./LabeledData/graphData/{path}', index_col=0).values for path in os.listdir('./LabeledData/graphData') if path.split('.')[1] == 'csv' }
+            with mp.Pool(processes=4) as pool:
+                files = list(filter(lambda path: path.split('.')[1] == 'csv', os.listdir('./LabeledData/graphData')))
+                self.graphData = pool.map(getGraphData, files)
+                self.graphData = { data[0]: data[1] for data in self.graphData }
+            # self.graphData = { path: pd.read_csv(f'./LabeledData/graphData/{path}', index_col=0).values for path in os.listdir('./LabeledData/graphData') if path.split('.')[1] == 'csv' }
         else:
             self.graphData = None
 
@@ -78,10 +87,11 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         self.currentPrice = 0.0
         # get next market snapshot
         _graphDir = './LabeledData/graphData'
-        _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
         if self.isHugeMemorryMode:
-            marketSnapshot = self.graphData['_graphPath']
+            _graphPath = self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
+            marketSnapshot = self.graphData[f'{_graphPath}']
         else:
+            _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
             marketSnapshot = pd.read_csv(_graphPath, index_col=0).values
         assert marketSnapshot != None
         marketSnapshot = marketSnapshot.astype(self.dtype)
@@ -111,10 +121,11 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         nextClosePrice = nextData['Close'].values.ravel()[0]
         # get next market snapshot
         _graphDir = './LabeledData/graphData'
-        _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
         if self.isHugeMemorryMode:
-            nextMarketSnapshot = self.graphData['_graphPath']
+            _graphPath = self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
+            nextMarketSnapshot = self.graphData[f'{_graphPath}']
         else:
+            _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
             nextMarketSnapshot = pd.read_csv(_graphPath, index_col=0).values
         nextMarketSnapshot = nextMarketSnapshot.astype(self.dtype)
         # get next holding rate according to specific action taken
