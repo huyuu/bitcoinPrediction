@@ -56,14 +56,16 @@ if __name__ == '__main__':
     # (num_units, kernel_size, stride)
     # critic_observationConvLayerParams = [(24, 3, 1), (24, 3, 1)]
     # critic_observationDenseLayerParams = [int(env.observation_spec()[0].shape[0]//2), int(env.observation_spec()[0].shape[0]//2)]
-    critic_commonDenseLayerParams = [int(observation_spec[0].shape[0]//2)]
+    critic_commonDenseLayerParams = [int(observation_spec[0].shape[0]//4)]
     # actor_convLayerParams = [(96, 3, 1), (24, 3, 1)]
-    actor_denseLayerParams = [int(observation_spec[0].shape[0]//2)]
+    actor_denseLayerParams = [int(observation_spec[0].shape[0]//4)]
 
     _storeYears = 2
     replayBufferCapacity = int(batchSize * _storeYears)
     warmupEpisodes = int(_storeYears * 4)
     validateEpisodes = 4
+
+    num_iterations = 300
 
 
 
