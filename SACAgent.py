@@ -61,7 +61,7 @@ if __name__ == '__main__':
     actor_denseLayerParams = [int(observation_spec[0].shape[0]//4)]
 
     _storeYears = 2
-    replayBufferCapacity = int(batchSize * _storeYears)
+    replayBufferCapacity = int(_storeYears * 4 * 3 * 30 * 24 * 4)
     warmupEpisodes = int(_storeYears * 4)
     validateEpisodes = 4
 
@@ -177,6 +177,7 @@ if __name__ == '__main__':
         max_length=replayBufferCapacity
     )
     print('Replay Buffer Created, start warming-up ...')
+    _startTime = dt.datetime.now()
 
     # driver for warm-up
     # https://www.tensorflow.org/agents/api_docs/python/tf_agents/drivers/dynamic_episode_driver/DynamicEpisodeDriver
@@ -187,11 +188,14 @@ if __name__ == '__main__':
         num_episodes=warmupEpisodes
     )
     initial_collect_driver.run()
-    print('Replay Buffer Warm-up Done.')
+    _timeCost = (dt.datetime.now() - _startTime).total_seconds()
+    print('Replay Buffer Warm-up Done. (cost {:.3g} hours)'.format(_timeCost/3600.0))
+    _startTime = dt.datetime.now()
 
 
     # Training
 
+    print('Prepare for training ...')
     collect_driver = dynamic_episode_driver.DynamicEpisodeDriver(
         env,
         collect_policy,
@@ -209,7 +213,8 @@ if __name__ == '__main__':
     # Main training process
     dataset = replay_buffer.as_dataset(num_parallel_calls=3, sample_batch_size=batchSize, num_steps=2).prefetch(3)
     iterator = iter(dataset)
-    print('Start training...')
+    _timeCost = (dt.datetime.now() - _startTime).total_seconds()
+    print('All preparation is done (cost {:.3g} hours). Start training...'.format(_timeCost/3600.0))
     for _ in range(num_iterations):
         # Collect a few steps using collect_policy and save to the replay buffer.
         collect_driver.run()

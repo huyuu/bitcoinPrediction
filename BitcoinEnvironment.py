@@ -163,7 +163,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
 
 if __name__ == '__main__':
     startDate = dt.datetime(2018,  7, 15, 0, 0, 0)
-    env = BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000)
+    env = BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=False)
 
     utils.validate_py_environment(env, episodes=3)
 
@@ -171,7 +171,7 @@ if __name__ == '__main__':
     # timeStep = env.reset()
     # print(timeStep)
     # cumulatedReward = timeStep.reward
-    # for _ in range(10):
+    # for _ in range(24*4):
     #     timeStep = env.step(constantAction)
     #     print(timeStep)
     #     cumulatedReward += timeStep.reward
