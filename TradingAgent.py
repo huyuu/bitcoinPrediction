@@ -115,7 +115,7 @@ def listenMarketWithMinTimeSpan(queue, shouldStop):
                 }
                 data = data.append(newData, ignore_index=True)
             # predict
-            ai.predictFromCurrentData(data, now, shouldSaveGraph=True, graphDataDir='./StoredData')
+            ai.predictFromCurrentData(data, responseTime, shouldSaveGraph=True, graphDataDir='./LabeledData/graphData')
             # save every time
             if now.minute < 1:
                 data = data.sort_values('DateTypeDate').reset_index(drop=True)

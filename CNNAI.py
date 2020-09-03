@@ -107,7 +107,7 @@ class CNNAI():
         pl.show()
 
 
-    def predictFromCurrentData(self, data, now, shouldSaveGraph, graphDataDir='./StoredData'):
+    def predictFromCurrentData(self, data, now, shouldSaveGraph, graphDataDir):
         self.__checkAndHandleLoadingModel()
 
         _minute = (now.minute // 15) * 15
@@ -146,7 +146,7 @@ class CNNAI():
         # save graph
         if shouldSaveGraph:
             fig = pl.figure()
-            pl.title('@UTC {} Prediction: {} (+:{:.3g}%, 0:{:.3g}%, -:{:.3g}%)'.format(now.strftime('%Y-%m-%d %H:%M:%S'), terms[nu.argmax(prediction)], prediction[0]*100, prediction[1]*100, prediction[2]*100), fontsize=24)
+            pl.title('@{} {} (+:{:.3g}%, =:{:.3g}%, -:{:.3g}%)'.format(now.strftime('%Y-%m-%d %H:%M:%S'), terms[nu.argmax(prediction)], prediction[0]*100, prediction[1]*100, prediction[2]*100), fontsize=24)
             pl.xlabel('Date', fontsize=22)
             pl.ylabel('Value', fontsize=22)
             pl.imshow(nu.rot90(graphArray), cmap = 'gray')
