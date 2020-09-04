@@ -43,7 +43,7 @@ if __name__ == '__main__':
 
     # Hyperparameters
 
-    batchSize = int(4*24)
+    batchSize = 1
 
     criticLearningRate = 3e-4
     actorLearningRate = 3e-4
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     _storeYears = 2
     replayBufferCapacity = int(_storeYears * 4 * 3 * 30 * 24 * 4)
     warmupEpisodes = int(_storeYears * 4)
-    validateEpisodes = 4
+    validateEpisodes = 2
 
     num_iterations = 300
 
@@ -211,7 +211,7 @@ if __name__ == '__main__':
     avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
     returns = [avg_return]
     # Main training process
-    dataset = replay_buffer.as_dataset(num_parallel_calls=3, sample_batch_size=batchSize, num_steps=2).prefetch(3)
+    dataset = replay_buffer.as_dataset(num_parallel_calls=7, sample_batch_size=batchSize, num_steps=2).prefetch(3)
     iterator = iter(dataset)
     _timeCost = (dt.datetime.now() - _startTime).total_seconds()
     print('All preparation is done (cost {:.3g} hours). Start training...'.format(_timeCost/3600.0))
