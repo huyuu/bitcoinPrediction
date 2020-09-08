@@ -48,7 +48,7 @@ if __name__ == '__main__':
 
     # Hyperparameters
 
-    batchSize = 8
+    batchSize = 1
 
     criticLearningRate = 3e-4
     actorLearningRate = 3e-4
