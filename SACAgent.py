@@ -24,7 +24,6 @@ from tf_agents.policies import greedy_policy, random_tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer, reverb_replay_buffer, reverb_utils
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
-tempdir = tempfile.gettempdir()
 # Custom Modules
 from BitcoinEnvironment import BTC_JPY_Environment
 
@@ -185,6 +184,7 @@ if __name__ == '__main__':
         batch_size=batchSize,
         max_length=replayBufferCapacity
     )
+    print(tf_agent.collect_data_spec)
     print('Replay Buffer Created, start warming-up ...')
     _startTime = dt.datetime.now()
 
