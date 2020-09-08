@@ -12,16 +12,19 @@ import tensorflow as tf
 tf.compat.v1.enable_v2_behavior()
 from tensorflow import keras as kr
 from tf_agents.agents.ddpg import critic_network
-from tf_agents.agents.sac import sac_agent
+from tf_agents.agents.sac import sac_agent, tanh_normal_projection_network
 from tf_agents.drivers import dynamic_step_driver, dynamic_episode_driver
 from tf_agents.environments import tf_py_environment
+from tf_agents.experimental.train import actor, learner, triggers
+from tf_agents.experimental.train.utils import spec_utils, strategy_utils, train_utils
 from tf_agents.eval import metric_utils
 from tf_agents.metrics import tf_metrics
 from tf_agents.networks import actor_distribution_network, normal_projection_network, value_network
 from tf_agents.policies import greedy_policy, random_tf_policy
-from tf_agents.replay_buffers import tf_uniform_replay_buffer
+from tf_agents.replay_buffers import tf_uniform_replay_buffer, reverb_replay_buffer, reverb_utils
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
+tempdir = tempfile.gettempdir()
 # Custom Modules
 from BitcoinEnvironment import BTC_JPY_Environment
 
@@ -40,10 +43,13 @@ if __name__ == '__main__':
     action_spec = env.action_spec()
     print('Environment created.')
 
+    # create strategy
+    strategy = strategy_utils.get_strategy(tpu=False, use_gpu=False)
+
 
     # Hyperparameters
 
-    batchSize = 1
+    batchSize = 8
 
     criticLearningRate = 3e-4
     actorLearningRate = 3e-4
@@ -68,7 +74,6 @@ if __name__ == '__main__':
     num_iterations = 300
 
 
-
     # Models
 
     # create Crite Network
@@ -79,6 +84,7 @@ if __name__ == '__main__':
     #     action_fc_layer_params=None,
     #     joint_fc_layer_params=critic_commonDenseLayerParams
     # )
+    # with strategy.scope():
     critic_net = value_network.ValueNetwork(
         (observation_spec, action_spec),
         preprocessing_layers=(
@@ -100,17 +106,18 @@ if __name__ == '__main__':
     )
     print('Critic Network Created.')
 
-    # create Actor Network
-    def normal_projection_net(action_spec):
-        return normal_projection_network.NormalProjectionNetwork(
-            action_spec,
-            mean_transform=None,
-            state_dependent_std=True,
-            init_means_output_factor=0.1,
-            std_transform=sac_agent.std_clip_transform,
-            scale_distribution=True
-        )
+    # # create Actor Network
+    # def normal_projection_net(action_spec):
+    #     return normal_projection_network.NormalProjectionNetwork(
+    #         action_spec,
+    #         mean_transform=None,
+    #         state_dependent_std=True,
+    #         init_means_output_factor=0.1,
+    #         std_transform=sac_agent.std_clip_transform,
+    #         scale_distribution=True
+    #     )
     # https://www.tensorflow.org/agents/api_docs/python/tf_agents/networks/actor_distribution_network/ActorDistributionNetwork
+    # with strategy.scope():
     actor_net = actor_distribution_network.ActorDistributionNetwork(
         input_tensor_spec=observation_spec,
         output_tensor_spec=action_spec,
@@ -125,7 +132,7 @@ if __name__ == '__main__':
         preprocessing_combiner=kr.layers.Concatenate(axis=-1),
         fc_layer_params=actor_denseLayerParams,
         dtype=tf.float32,
-        continuous_projection_net=normal_projection_net,
+        continuous_projection_net=tanh_normal_projection_network.TanhNormalProjectionNetwork,
         name='ActorDistributionNetwork'
     )
     print('Actor Network Created.')
@@ -133,6 +140,8 @@ if __name__ == '__main__':
     # create SAC Agent
     # https://www.tensorflow.org/agents/api_docs/python/tf_agents/agents/SacAgent
     global_step = tf.compat.v1.train.get_or_create_global_step()
+    # with strategy.scope():
+    #     train_step = train_utils.create_train_step()
     tf_agent = sac_agent.SacAgent(
         env.time_step_spec(),
         action_spec,
@@ -173,11 +182,14 @@ if __name__ == '__main__':
     # https://www.google.com/url?client=internal-element-cse&cx=016807462989910793636:iigazrvgr1m&q=https://www.tensorflow.org/agents/api_docs/python/tf_agents/replay_buffers/tf_uniform_replay_buffer/TFUniformReplayBuffer&sa=U&ved=2ahUKEwivq9qvnaTrAhXMdXAKHf2nBQYQFjAAegQIBBAB&usg=AOvVaw2elqEhFKUSZf8WeAl53gVK
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         data_spec=tf_agent.collect_data_spec,
-        batch_size=env.batch_size,
+        batch_size=batchSize,
         max_length=replayBufferCapacity
     )
     print('Replay Buffer Created, start warming-up ...')
     _startTime = dt.datetime.now()
+
+    # create Reverb
+
 
     # driver for warm-up
     # https://www.tensorflow.org/agents/api_docs/python/tf_agents/drivers/dynamic_episode_driver/DynamicEpisodeDriver
@@ -211,7 +223,7 @@ if __name__ == '__main__':
     avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
     returns = [avg_return]
     # Main training process
-    dataset = replay_buffer.as_dataset(num_parallel_calls=7, sample_batch_size=batchSize, num_steps=2).prefetch(3)
+    dataset = replay_buffer.as_dataset(num_parallel_calls=7, sample_batch_size=batchSize, num_steps=2)
     iterator = iter(dataset)
     _timeCost = (dt.datetime.now() - _startTime).total_seconds()
     print('All preparation is done (cost {:.3g} hours). Start training...'.format(_timeCost/3600.0))
