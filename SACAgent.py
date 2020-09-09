@@ -42,8 +42,8 @@ if __name__ == '__main__':
     action_spec = env.action_spec()
     print('Environment created.')
 
-    # create strategy
-    strategy = strategy_utils.get_strategy(tpu=False, use_gpu=False)
+    # # create strategy
+    # strategy = strategy_utils.get_strategy(tpu=False, use_gpu=False)
 
 
     # Hyperparameters
@@ -104,7 +104,7 @@ if __name__ == '__main__':
                     # kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
                     kr.layers.Flatten()
                 ]),
-                'observation_market': kr.layers.Dense(1, activation='sigmoid')
+                'observation_holdingRate': kr.layers.Dense(1, activation='sigmoid')
             },
             kr.layers.Dense(1, activation='sigmoid')
         ),
