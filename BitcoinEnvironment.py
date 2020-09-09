@@ -37,7 +37,11 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         self.__actionSpec = BoundedArraySpec(shape=(2,), dtype=self.dtype, minimum=-1, maximum=1, name='action')
         # https://www.tensorflow.org/agents/api_docs/python/tf_agents/environments/py_environment/PyEnvironment#observation_spec
         # https://www.tensorflow.org/agents/api_docs/python/tf_agents/typing/types/NestedArraySpec
-        self.__observationSpec = (BoundedArraySpec(shape=(imageWidth, imageHeight), dtype=self.dtype, minimum=0, maximum=1, name='observation_market'), BoundedArraySpec(shape=(1,), dtype=self.dtype, minimum=0, maximum=1, name='observation_holdingRate'))
+        # self.__observationSpec = (BoundedArraySpec(shape=(imageWidth, imageHeight), dtype=self.dtype, minimum=0, maximum=1, name='observation_market'), BoundedArraySpec(shape=(1,), dtype=self.dtype, minimum=0, maximum=1, name='observation_holdingRate'))
+        self.__observationSpec = {
+            'observation_market': BoundedArraySpec(shape=(imageWidth, imageHeight), dtype=self.dtype, minimum=0, maximum=1, name='observation_market'),
+            'observation_holdingRate': BoundedArraySpec(shape=(1,), dtype=self.dtype, minimum=0, maximum=1, name='observation_holdingRate')
+        }
         self.holdingBTC = 0
         self.holdingJPY = initialAsset
         self.initialAsset = initialAsset
@@ -95,7 +99,11 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             marketSnapshot = pd.read_csv(_graphPath, index_col=0).values
         marketSnapshot = marketSnapshot.astype(self.dtype)
         # self.currentState = nu.append(marketSnapshot, self.holdingRate)
-        self.currentState = (marketSnapshot, nu.array([self.holdingRate], dtype=self.dtype))
+        # self.currentState = (marketSnapshot, nu.array([self.holdingRate], dtype=self.dtype))
+        self.currentState = {
+            'observation_market': marketSnapshot,
+            'observation_holdingRate': nu.array([self.holdingRate], dtype=self.dtype)
+        }
         self.episodeCount = 0
         return ts.restart(self.currentState)
 
@@ -150,7 +158,11 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             pass  # do nothing if deltaHoldingRate == 0
         assert 0 <= self.holdingRate <= 1
         # concate marketData and holdingRate to make currentState
-        self.currentState = (nextMarketSnapshot, nu.array([self.holdingRate], dtype=self.dtype))
+        # self.currentState = (nextMarketSnapshot, nu.array([self.holdingRate], dtype=self.dtype))
+        self.currentState = {
+            'observation_market': nextMarketSnapshot,
+            'observation_holdingRate': nu.array([self.holdingRate], dtype=self.dtype)
+        }
         return ts.transition(self.currentState, reward=0, discount=1.0)
 
 
