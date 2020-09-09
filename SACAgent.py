@@ -71,6 +71,8 @@ if __name__ == '__main__':
     validateEpisodes = 2
 
     num_iterations = 300
+    log_interval = 1000
+    eval_interval = 10000
 
 
     # Models
@@ -256,6 +258,6 @@ if __name__ == '__main__':
         if step % log_interval == 0:
             print('step = {0}: loss = {1}'.format(step, train_loss.loss))
         if step % eval_interval == 0:
-            avg_return = compute_avg_return(evaluate_env, evaluate_policy, num_eval_episodes)
+            avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
             print('step = {0}: Average Return = {1}'.format(step, avg_return))
         returns.append(avg_return)
