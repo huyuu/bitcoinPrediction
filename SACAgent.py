@@ -61,9 +61,9 @@ if __name__ == '__main__':
     # (num_units, kernel_size, stride)
     # critic_observationConvLayerParams = [(24, 3, 1), (24, 3, 1)]
     # critic_observationDenseLayerParams = [int(env.observation_spec()[0].shape[0]//2), int(env.observation_spec()[0].shape[0]//2)]
-    critic_commonDenseLayerParams = [int(observation_spec[0].shape[0]//4)]
+    critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
     # actor_convLayerParams = [(96, 3, 1), (24, 3, 1)]
-    actor_denseLayerParams = [int(observation_spec[0].shape[0]//4)]
+    actor_denseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
 
     _storeYears = 2
     replayBufferCapacity = int(_storeYears * 4 * 3 * 30 * 24 * 4)
@@ -100,7 +100,7 @@ if __name__ == '__main__':
         preprocessing_layers=(
             {
                 'observation_market': kr.models.Sequential([
-                    kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
+                    kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
                     # kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
                     kr.layers.Flatten()
                 ]),
@@ -141,7 +141,7 @@ if __name__ == '__main__':
         # ),
         preprocessing_layers={
             'observation_market': kr.models.Sequential([
-                kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
+                kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
                 # kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
                 kr.layers.Flatten()
             ]),
