@@ -233,9 +233,9 @@ if __name__ == '__main__':
         observers=[replay_buffer.add_batch],
         num_episodes=1
     )
-    # (Optional) Optimize by wrapping some of the code in a graph using TF function.
-    tf_agent.train = common.function(tf_agent.train)
-    collect_driver.run = common.function(collect_driver.run)
+    # # (Optional) Optimize by wrapping some of the code in a graph using TF function.
+    # tf_agent.train = common.function(tf_agent.train)
+    # collect_driver.run = common.function(collect_driver.run)
     # Reset the train step
     tf_agent.train_step_counter.assign(0)
     # Evaluate the agent's policy once before training.
