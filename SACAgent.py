@@ -59,8 +59,8 @@ if __name__ == '__main__':
     target_update_tau = 0.005
 
     # (num_units, kernel_size, stride)
-    # critic_observationConvLayerParams = [(24, 3, 1), (24, 3, 1)]
-    # critic_observationDenseLayerParams = [int(env.observation_spec()[0].shape[0]//2), int(env.observation_spec()[0].shape[0]//2)]
+    # critic_observationConvLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
+    critic_observationDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
     critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
     # actor_convLayerParams = [(96, 3, 1), (24, 3, 1)]
     actor_denseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
@@ -79,43 +79,43 @@ if __name__ == '__main__':
 
     # create Crite Network
     # https://www.tensorflow.org/agents/api_docs/python/tf_agents/agents/ddpg/critic_network/CriticNetwork
-    # critic_net = critic_network.CriticNetwork(
-    #     (observation_spec, action_spec),
-    #     observation_fc_layer_params=critic_observationDenseLayerParams,
-    #     action_fc_layer_params=None,
-    #     joint_fc_layer_params=critic_commonDenseLayerParams
-    # )
-    # with strategy.scope():
-    critic_net = value_network.ValueNetwork(
+    critic_net = critic_network.CriticNetwork(
         (observation_spec, action_spec),
-        # preprocessing_layers=(
-        #     (
-        #         kr.models.Sequential([
-        #             kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
-        #             # kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
-        #             kr.layers.Flatten()
-        #         ]),
-        #         kr.layers.Dense(1, activation='sigmoid')
-        #     ),
-        #     kr.layers.Dense(1, activation='sigmoid')
-        # ),
-        preprocessing_layers=(
-            {
-                'observation_market': kr.models.Sequential([
-                    kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
-                    # kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
-                    kr.layers.Flatten()
-                ]),
-                'observation_holdingRate': kr.layers.Dense(1, activation='sigmoid')
-            },
-            kr.layers.Dense(1, activation='sigmoid')
-        ),
-        preprocessing_combiner=kr.layers.Concatenate(axis=-1),
-        conv_layer_params=None,
-        fc_layer_params=critic_commonDenseLayerParams,
-        dtype=tf.float32,
-        name='Critic Network'
+        observation_fc_layer_params=critic_observationDenseLayerParams,
+        action_fc_layer_params=None,
+        joint_fc_layer_params=critic_commonDenseLayerParams
     )
+    # with strategy.scope():
+    # critic_net = value_network.ValueNetwork(
+    #     (observation_spec, action_spec),
+    #     # preprocessing_layers=(
+    #     #     (
+    #     #         kr.models.Sequential([
+    #     #             kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
+    #     #             # kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
+    #     #             kr.layers.Flatten()
+    #     #         ]),
+    #     #         kr.layers.Dense(1, activation='sigmoid')
+    #     #     ),
+    #     #     kr.layers.Dense(1, activation='sigmoid')
+    #     # ),
+    #     preprocessing_layers=(
+    #         {
+    #             'observation_market': kr.models.Sequential([
+    #                 kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
+    #                 # kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
+    #                 kr.layers.Flatten()
+    #             ]),
+    #             'observation_holdingRate': kr.layers.Dense(1, activation='sigmoid')
+    #         },
+    #         kr.layers.Dense(1, activation='sigmoid')
+    #     ),
+    #     preprocessing_combiner=kr.layers.Concatenate(axis=-1),
+    #     conv_layer_params=None,
+    #     fc_layer_params=critic_commonDenseLayerParams,
+    #     dtype=tf.float32,
+    #     name='Critic Network'
+    # )
     print('Critic Network Created.')
 
     # # create Actor Network
