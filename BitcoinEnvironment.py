@@ -112,6 +112,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
     def _step(self, action):
         if self.__checkIfEpisodeShouldEnd()  == True:
             reward = self.currentPrice * self.holdingBTC + self.holdingJPY - self.initialAsset
+            print('Episode did ended with reward: {}'.format(reward))
             return ts.termination(self.currentState, reward)
         # if should continue trading
         self.episodeCount += 1
@@ -163,11 +164,13 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             'observation_market': nextMarketSnapshot,
             'observation_holdingRate': nu.array([self.holdingRate], dtype=self.dtype)
         }
+        print('holdingRate: {:.3g}, holdingBTC: {:.4g}, holdingJPY: {:.4g}'.format(self.holdingRate, self.holdingBTC, self.holdingJPY))
         return ts.transition(self.currentState, reward=0, discount=1.0)
 
 
     def __checkIfEpisodeShouldEnd(self):
-        return self.episodeCount > self.episodeEndSteps
+        didBankrupted = self.holdingBTC <= 1e-4 and self.holdingJPY <= 100.0
+        return didBankrupted or self.episodeCount > self.episodeEndSteps
 
 
 
