@@ -86,7 +86,7 @@ if __name__ == '__main__':
     #     joint_fc_layer_params=critic_commonDenseLayerParams
     # )
     critic_net = q_network.QNetwork(
-        input_tensor_spec,
+        observation_spec,
         action_spec,
         preprocessing_layers=(
             {
