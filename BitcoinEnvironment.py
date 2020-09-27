@@ -158,7 +158,10 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
                 self.holdingRate = self.holdingBTC*nextClosePrice / (self.holdingJPY + self.holdingBTC*nextClosePrice)
         else:
             pass  # do nothing if deltaHoldingRate == 0
-        assert 0 <= self.holdingRate <= 1
+
+        if 0 <= self.holdingRate <= 1:
+            print(self.holdingRate)
+            raise ValueError
         # concate marketData and holdingRate to make currentState
         # self.currentState = (nextMarketSnapshot, nu.array([self.holdingRate], dtype=self.dtype))
         self.currentState = {
