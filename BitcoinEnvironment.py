@@ -141,12 +141,13 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         exchangeIndicator = action[0]
         # if should add some BTC
         if exchangeIndicator > 0:
-            costJPY = self.holdingJPY * exchangeIndicator
-            # if btc can be bought, update holdings; otherwise do nothing
-            if nextData['Low'].values[0] < price:
-                self.holdingBTC += costJPY / price
-                self.holdingJPY -= costJPY
-                self.holdingRate = self.holdingBTC*nextClosePrice / (self.holdingJPY + self.holdingBTC*nextClosePrice)
+            if self.holdingRate < 1:
+                costJPY = self.holdingJPY * exchangeIndicator
+                # if btc can be bought, update holdings; otherwise do nothing
+                if nextData['Low'].values[0] < price:
+                    self.holdingBTC += costJPY / price
+                    self.holdingJPY -= costJPY
+                    self.holdingRate = self.holdingBTC*nextClosePrice / (self.holdingJPY + self.holdingBTC*nextClosePrice)
         # if should sell some BTC
         elif exchangeIndicator < 0:
             costBTCAmount = self.holdingBTC * (-exchangeIndicator)
