@@ -159,7 +159,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         else:
             pass  # do nothing if deltaHoldingRate == 0
 
-        if 0 <= self.holdingRate <= 1:
+        if self.holdingRate < 0 or self.holdingRate > 1:
             print(self.holdingRate)
             raise ValueError
         # concate marketData and holdingRate to make currentState
