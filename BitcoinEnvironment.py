@@ -60,6 +60,8 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
 
         self.episodeCount = 0
         self.episodeEndSteps = 4*24*30*3
+        # reward will be clipped to [-1, 1] using reward/(coeff*initAsset)
+        self.rewardClipCoeff = 5
 
         self.isHugeMemorryMode = isHugeMemorryMode
         if isHugeMemorryMode:
@@ -111,7 +113,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
     # required
     def _step(self, action):
         if self.__checkIfEpisodeShouldEnd()  == True:
-            reward = self.currentPrice * self.holdingBTC + self.holdingJPY - self.initialAsset
+            reward = (self.currentPrice * self.holdingBTC + self.holdingJPY - self.initialAsset) / (self.rewardClipCoeff*self.initialAsset)
             print('Episode did ended with reward: {}'.format(reward))
             return ts.termination(self.currentState, reward)
         # if should continue trading
@@ -174,7 +176,8 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             'observation_holdingRate': nu.array([self.holdingRate], dtype=self.dtype)
         }
         print('steps: {:>4}, buy(+)/sell(-) amount of BTC: {:+6.3f}, exc. rate: {:+5.2f}, holdingRate: {:.4f}, BTC: {:.3f}, JPY: {:>8.1f}, asset: {:>8.1f}'.format(self.episodeCount, action[0], action[1], self.holdingRate, self.holdingBTC, self.holdingJPY, self.currentPrice*self.holdingBTC+self.holdingJPY))
-        return ts.transition(self.currentState, reward=0, discount=1.0)
+        deltaAsset = self.currentPrice * self.holdingBTC + self.holdingJPY - self.initialAsset
+        return ts.transition(self.currentState, reward=deltaAsset/(self.rewardClipCoeff*self.initialAsset)/10, discount=0.999)
 
 
     def __checkIfEpisodeShouldEnd(self):
