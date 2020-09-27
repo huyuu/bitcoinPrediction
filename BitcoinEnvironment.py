@@ -168,7 +168,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             'observation_market': nextMarketSnapshot,
             'observation_holdingRate': nu.array([self.holdingRate], dtype=self.dtype)
         }
-        print('holdingRate: {:.3g}, holdingBTC: {:.4g}, holdingJPY: {:.4g}'.format(self.holdingRate, self.holdingBTC, self.holdingJPY))
+        print('action: {}, holdingRate: {:.3g}, holdingBTC: {:.4g}, holdingJPY: {:.4g}'.format(action, self.holdingRate, self.holdingBTC, self.holdingJPY))
         return ts.transition(self.currentState, reward=0, discount=1.0)
 
 
