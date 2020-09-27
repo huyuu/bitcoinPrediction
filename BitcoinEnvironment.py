@@ -137,10 +137,13 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             nextMarketSnapshot = pd.read_csv(_graphPath, index_col=0).values
         nextMarketSnapshot = nextMarketSnapshot.astype(self.dtype)
         # get next holding rate according to specific action taken
+        # action[0] = percentage of selling(+) holdingJPY / selling(-) holdingBTC
+        # action[1] = exchanging rate (relatively to current rate)
         price = self.currentPrice * (1+action[1])
         exchangeIndicator = action[0]
         # if should add some BTC
         if exchangeIndicator > 0:
+            # if have any JPY left
             if self.holdingRate < 1:
                 costJPY = self.holdingJPY * exchangeIndicator
                 # if btc can be bought, update holdings; otherwise do nothing
@@ -150,12 +153,14 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
                     self.holdingRate = self.holdingBTC*nextClosePrice / (self.holdingJPY + self.holdingBTC*nextClosePrice)
         # if should sell some BTC
         elif exchangeIndicator < 0:
-            costBTCAmount = self.holdingBTC * (-exchangeIndicator)
-            # if btc can be sold, update holdings; otherwise do nothing
-            if price < nextData['High'].values[0]:
-                self.holdingBTC -= costBTCAmount
-                self.holdingJPY += costBTCAmount * price
-                self.holdingRate = self.holdingBTC*nextClosePrice / (self.holdingJPY + self.holdingBTC*nextClosePrice)
+            # if have any BTC to be sold
+            if self.holdingRate > 0:
+                costBTCAmount = self.holdingBTC * (-exchangeIndicator)
+                # if btc can be sold, update holdings; otherwise do nothing
+                if price < nextData['High'].values[0]:
+                    self.holdingBTC -= costBTCAmount
+                    self.holdingJPY += costBTCAmount * price
+                    self.holdingRate = self.holdingBTC*nextClosePrice / (self.holdingJPY + self.holdingBTC*nextClosePrice)
         else:
             pass  # do nothing if deltaHoldingRate == 0
 
@@ -168,7 +173,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             'observation_market': nextMarketSnapshot,
             'observation_holdingRate': nu.array([self.holdingRate], dtype=self.dtype)
         }
-        print('action: {}, holdingRate: {:.3g}, holdingBTC: {:.4g}, holdingJPY: {:.4g}'.format(action, self.holdingRate, self.holdingBTC, self.holdingJPY))
+        print('steps: {:>4}, buy(+)/sell(-) amount of BTC: {:+6.3f}, exc. rate: {:+5.2f}, holdingRate: {:.4f}, BTC: {:.3f}, JPY: {:>8.1f}'.format(self.episodeCount, action[0], action[1], self.holdingRate, self.holdingBTC, self.holdingJPY))
         return ts.transition(self.currentState, reward=0, discount=1.0)
 
 
