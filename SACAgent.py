@@ -162,7 +162,8 @@ if __name__ == '__main__':
         critic_optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=criticLearningRate),
         alpha_optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=alphaLearningRate),
         target_update_tau=target_update_tau,
-        td_errors_loss_fn=tf.compat.v1.losses.mean_squared_error,
+        # td_errors_loss_fn=tf.compat.v1.losses.mean_squared_error,
+        td_errors_loss_fn=tf.math.squared_difference,
         gamma=gamma,
         gradient_clipping=gradientClipping,
         train_step_counter=global_step
