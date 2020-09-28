@@ -7,6 +7,7 @@ import numpy as nu
 import pandas as pd
 import datetime as dt
 import multiprocessing as mp
+from matplotlib import pyplot as pl
 # Tensorflow Modules
 import tensorflow as tf
 tf.compat.v1.enable_v2_behavior()
@@ -54,7 +55,7 @@ if __name__ == '__main__':
     actorLearningRate = 3e-4
     alphaLearningRate = 3e-4
 
-    gamma = 0.999
+    gamma = 0.99
     gradientClipping = None
     target_update_tau = 0.005
 
@@ -247,9 +248,11 @@ if __name__ == '__main__':
         experience, unused_info = next(iterator)
         train_loss = tf_agent.train(experience)
         step = tf_agent.train_step_counter.numpy()
-        if step % log_interval == 0:
-            print('step = {0}: loss = {1}'.format(step, train_loss.loss))
-        if step % eval_interval == 0:
-            avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
-            print('step = {0}: Average Return = {1}'.format(step, avg_return))
+        # if step % log_interval == 0:
+        print('step = {0}: loss = {1}'.format(step, train_loss.loss))
+        # if step % eval_interval == 0:
+        avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
+        print('step = {0}: Average Return = {1}'.format(step, avg_return))
         returns.append(avg_return)
+    pl.plot(returns)
+    pl.show()

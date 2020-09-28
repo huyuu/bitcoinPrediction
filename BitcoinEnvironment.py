@@ -176,7 +176,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             'observation_holdingRate': nu.array([self.holdingRate], dtype=self.dtype)
         }
         deltaAsset = self.currentPrice * self.holdingBTC + self.holdingJPY - self.initialAsset
-        _stepReward = deltaAsset/(self.rewardClipCoeff*self.initialAsset)/float(self.episodeEndSteps*2)
+        _stepReward = deltaAsset/(self.rewardClipCoeff*self.initialAsset)/float(self.episodeEndSteps*4)
         print('steps: {:>4}, buy(+)/sell(-) amount of BTC: {:+6.3f}, exc. rate: {:+5.2f}, holdingRate: {:.4f}, BTC: {:.3f}, JPY: {:>8.1f}, asset: {:>8.1f}, reward: {:+9.6f}'.format(self.episodeCount, action[0], action[1], self.holdingRate, self.holdingBTC, self.holdingJPY, self.currentPrice*self.holdingBTC+self.holdingJPY, _stepReward))
         return ts.transition(self.currentState, reward=_stepReward, discount=0.99)
 
