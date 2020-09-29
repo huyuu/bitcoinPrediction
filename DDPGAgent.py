@@ -128,7 +128,7 @@ if __name__ == '__main__':
     collect_policy = tf_agent.collect_policy
 
     # metrics and evaluation
-    def compute_avg_return(environment, policy, num_episodes=5):
+    def compute_avg_return(environment, policy, num_episodes=2):
         total_return = 0.0
         for _ in range(num_episodes):
             time_step = environment.reset()
@@ -174,7 +174,7 @@ if __name__ == '__main__':
         env,
         collect_policy,
         observers=[replay_buffer.add_batch],
-        num_episodes=1
+        num_episodes=10
     )
     # # (Optional) Optimize by wrapping some of the code in a graph using TF function.
     # tf_agent.train = common.function(tf_agent.train)
@@ -185,7 +185,7 @@ if __name__ == '__main__':
     avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
     returns = [avg_return]
     # Main training process
-    dataset = replay_buffer.as_dataset(num_parallel_calls=7, sample_batch_size=batchSize, num_steps=2)
+    dataset = replay_buffer.as_dataset(num_parallel_calls=7, sample_batch_size=batchSize, num_steps=1)
     iterator = iter(dataset)
     _timeCost = (dt.datetime.now() - _startTime).total_seconds()
     print('All preparation is done (cost {:.3g} hours). Start training...'.format(_timeCost/3600.0))

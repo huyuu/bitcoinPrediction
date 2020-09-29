@@ -226,7 +226,7 @@ if __name__ == '__main__':
         env,
         collect_policy,
         observers=[replay_buffer.add_batch],
-        num_episodes=1
+        num_episodes=10
     )
     # # (Optional) Optimize by wrapping some of the code in a graph using TF function.
     # tf_agent.train = common.function(tf_agent.train)
