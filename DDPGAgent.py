@@ -67,7 +67,7 @@ if __name__ == '__main__':
     eval_interval = 10000
 
     # Actor
-    actor_net = actor_distribution_network.ActorDistributionNetwork(
+    actor = actor_distribution_network.ActorDistributionNetwork(
         input_tensor_spec=observation_spec,
         output_tensor_spec=action_spec,
         preprocessing_layers={
@@ -111,8 +111,8 @@ if __name__ == '__main__':
     tf_agent = DdpgAgent(
         time_step_spec=env.time_step_spec(),
         action_spec=action_spec,
-        actor_network=actor_network,
-        critic_network=critic_network,
+        actor_network=actor_net,
+        critic_network=critic_net,
         dqda_clipping=None,
         td_errors_loss_fn=None,
         gamma=gamma,
