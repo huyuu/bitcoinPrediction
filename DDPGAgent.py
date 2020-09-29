@@ -13,7 +13,8 @@ import tensorflow as tf
 tf.compat.v1.enable_v2_behavior()
 from tensorflow import keras as kr
 from tf_agents.networks.network import Network
-from tf_agents.agents.ddpg import critic_network, DdpgAgent
+from tf_agents.agents.ddpg import critic_network
+from tf_agents.agents import DdpgAgent
 from tf_agents.agents.ddpg.actor_network import ActorNetwork
 from tf_agents.agents.ddpg.critic_network import CriticNetwork
 from tf_agents.agents.sac import sac_agent, tanh_normal_projection_network
@@ -107,19 +108,19 @@ if __name__ == '__main__':
     print('Critic Network Created.')
     # DDPG Agent
     global_step = tf.compat.v1.train.get_or_create_global_step()
-    DdpgAgent(
-        time_step_spec: tf_agents.trajectories.time_step.TimeStep,
-        action_spec: action_spec,
-        actor_network: actor_network,
-        critic_network: critic_network,
-        dqda_clipping: None,
-        td_errors_loss_fn: None,
-        gamma: gamma,
-        reward_scale_factor: 1.0,
-        gradient_clipping: None,
-        summarize_grads_and_vars: bool = False,
-        train_step_counter: global_step,
-        name: 'Agent'
+    tf_agent = DdpgAgent(
+        time_step_spec=env.time_step_spec(),
+        action_spec=action_spec,
+        actor_network=actor_network,
+        critic_network=critic_network,
+        dqda_clipping=None,
+        td_errors_loss_fn=None,
+        gamma=gamma,
+        reward_scale_factor=1.0,
+        gradient_clipping=None,
+        summarize_grads_and_vars=False,
+        train_step_counter=global_step,
+        name='Agent'
     )
 
     # policies
