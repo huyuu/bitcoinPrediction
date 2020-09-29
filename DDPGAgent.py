@@ -67,7 +67,7 @@ if __name__ == '__main__':
     eval_interval = 10000
 
     # Actor
-    actor = actor_distribution_network.ActorDistributionNetwork(
+    actor_net = actor_distribution_network.ActorDistributionNetwork(
         input_tensor_spec=observation_spec,
         output_tensor_spec=action_spec,
         preprocessing_layers={
