@@ -56,7 +56,7 @@ class CustomActorNetwork(Network):
             raise ValueError('flatten action_spec should be len=2, but get len={}'.format(len(flat_action_spec)))
         self._single_action_spec = flat_action_spec[0]
         # set up kernel_initializer
-        kernel_initializer = tf.keras.initializers.VarianceScaling(scale=1. / 3., mode='fan_in', distribution='uniform')
+        # kernel_initializer = tf.keras.initializers.VarianceScaling(scale=1. / 3., mode='fan_in', distribution='uniform')
         # set up encoder_network
         self._encoder = encoding_network.EncodingNetwork(
             observation_spec,
@@ -66,15 +66,15 @@ class CustomActorNetwork(Network):
             fc_layer_params=fc_layer_params,
             dropout_layer_params=dropout_layer_params,
             activation_fn=activation_fn,
-            kernel_initializer=kernel_initializer,
+            # kernel_initializer=kernel_initializer,
             batch_squash=False
         )
         # set up action_projection layer
-        initializer = tf.keras.initializers.RandomUniform(minval=-0.003, maxval=0.003)
+        # initializer = tf.keras.initializers.RandomUniform(minval=-0.003, maxval=0.003)
         self._action_projection_layer = tf.keras.layers.Dense(
             flat_action_spec[0].shape.num_elements(),
             activation=tf.keras.activations.tanh,
-            kernel_initializer=initializer,
+            # kernel_initializer=initializer,
             name='action_projection_layer'
         )
 
