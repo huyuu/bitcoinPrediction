@@ -137,7 +137,7 @@ if __name__ == '__main__':
                 kr.layers.Flatten()
             ]),
             'observation_holdingRate': kr.layers.Dense(2, activation='sigmoid')
-        }
+        },
         preprocessing_combiner=kr.layers.Concatenate(axis=-1),
         conv_layer_params=None,
         fc_layer_params=critic_commonDenseLayerParams,
