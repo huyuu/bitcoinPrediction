@@ -87,7 +87,7 @@ class CustomActorNetwork(Network):
 
         state, network_state = self._encoder(observations, step_type=step_type, network_state=network_state)
         actions = self._action_projection_layer(state)
-        actions = common_utils.scale_to_spec(actions, self._single_action_spec)
+        actions = common.scale_to_spec(actions, self._single_action_spec)
         actions = batch_squash.unflatten(actions)
         return tf.nest.pack_sequence_as(self._action_spec, [actions]), network_state
 
