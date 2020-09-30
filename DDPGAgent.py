@@ -15,9 +15,9 @@ from tensorflow import keras as kr
 from tf_agents.networks import encoding_network, utils
 from tf_agents.networks.network import Network
 from tf_agents.networks.q_network import QNetwork
+from tf_agents.networks.value_network import ValueNetwork
 from tf_agents.agents.ddpg import critic_network
 from tf_agents.agents import DdpgAgent
-from tf_agents.agents.ddpg.critic_network import CriticNetwork
 from tf_agents.agents.sac import sac_agent, tanh_normal_projection_network
 from tf_agents.drivers import dynamic_step_driver, dynamic_episode_driver
 from tf_agents.environments import tf_py_environment
@@ -136,7 +136,7 @@ if __name__ == '__main__':
                 # kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
                 kr.layers.Flatten()
             ]),
-            'observation_holdingRate': kr.layers.Dense(1, activation='sigmoid')
+            'observation_holdingRate': kr.layers.Dense(2, activation='sigmoid')
         },
         preprocessing_combiner=kr.layers.Concatenate(axis=-1),
         fc_layer_params=actor_denseLayerParams,
@@ -148,9 +148,8 @@ if __name__ == '__main__':
     # Critic Network: we need a Q network to produce f(state, action) -> expected reward(single value)
     # book p.513-515
     # https://www.tensorflow.org/agents/api_docs/python/tf_agents/networks/q_network/QNetwork
-    critic_net = QNetwork(
-        observation_spec,
-        action_spec,
+    critic_net = ValueNetwork(
+        (observation_spec, action_spec),
         preprocessing_layers=(
             {
                 'observation_market': kr.models.Sequential([
@@ -158,15 +157,15 @@ if __name__ == '__main__':
                     # kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
                     kr.layers.Flatten()
                 ]),
-                'observation_holdingRate': kr.layers.Dense(1, activation='sigmoid')
+                'observation_holdingRate': kr.layers.Dense(2, activation='sigmoid')
             },
-            kr.layers.Dense(1, activation='sigmoid')
+            kr.layers.Dense(2, activation='sigmoid')
         ),
         preprocessing_combiner=kr.layers.Concatenate(axis=-1),
         conv_layer_params=None,
         fc_layer_params=critic_commonDenseLayerParams,
-        activation_fn=tf.keras.activations.relu,
-        name='QNetwork'
+        dtype=tf.float32,
+        name='Critic Network'
     )
     print('Critic Network Created.')
     # DDPG Agent
