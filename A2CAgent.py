@@ -20,11 +20,11 @@ from tf_agents.environments import suite_gym
 from tf_agents.environments import tf_py_environment
 from tf_agents.eval import metric_utils
 from tf_agents.metrics import tf_metrics
-from tf_agents.networks import actor_distribution_network
+from tf_agents.experimental.train.utils import spec_utils, strategy_utils, train_utils
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.trajectories import trajectory
 from tf_agents.policies import greedy_policy, random_tf_policy
-from tf_agents.utils import common
+from tf_agents.utils import common, nest_utils
 # Custom Modules
 from BitcoinEnvironment import BTC_JPY_Environment
 
