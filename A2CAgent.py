@@ -12,6 +12,7 @@ import tensorflow as tf
 tf.compat.v1.enable_v2_behavior()
 from tensorflow import keras as kr
 from tf_agents.agents.reinforce.reinforce_agent import ReinforceAgent
+from tf_agents.networks import encoding_network, utils
 from tf_agents.networks.network import Network
 from tf_agents.drivers import dynamic_step_driver
 from tf_agents.environments import suite_gym
