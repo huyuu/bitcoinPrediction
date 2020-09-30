@@ -113,8 +113,7 @@ if __name__ == '__main__':
     log_interval = 25 # @param {type:"integer"}
     num_eval_episodes = 2 # @param {type:"integer"}
     eval_interval = 50 # @param {type:"integer"}
-
-    replayBufferCapacity = int(_storeYears * 4 * 3 * 30 * 24 * 4)
+    
 
     # Actor Network
     actor_net = CustomActorNetwork(
@@ -236,6 +235,7 @@ if __name__ == '__main__':
     _timeCost = (dt.datetime.now() - _startTime).total_seconds()
     print('All preparation is done (cost {:.3g} hours). Start training...'.format(_timeCost/3600.0))
     for _ in range(num_iterations):
+        _startTime = dt.datetime.now()
         # Collect a few steps using collect_policy and save to the replay buffer.
         collect_driver.run()
         # Since the A2C is a on-policy method, we gather all experiences for one descent step and have the buffer cleared immediately.
@@ -244,7 +244,8 @@ if __name__ == '__main__':
         replay_buffer.clear()
         step = tf_agent.train_step_counter.numpy()
         # if step % log_interval == 0:
-        print('step = {0}: loss = {1}'.format(step, train_loss.loss))
+        _timeCost = (dt.datetime.now() - _startTime).total_seconds()
+        print('step = {}: loss = {} ({:.3g})'.format(step, train_loss.loss, _timeCost/3600.0))
         if step % eval_interval == 0:
             avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
             print('step = {0}: Average Return = {1}'.format(step, avg_return))
