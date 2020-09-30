@@ -106,14 +106,18 @@ if __name__ == '__main__':
     replayBufferCapacity = int(_storeFullEpisodes * 3 * 30 * 24 * 4)
     validateEpisodes = 2
 
-    fc_layer_params = (100,)
+    critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
+    actor_denseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
 
+    batchSize = 1
+    gamma = 0.99
     learning_rate = 3e-4 # @param {type:"number"}
     entropy_coeff = 1e-4
+    num_iterations = 300
     log_interval = 25 # @param {type:"integer"}
     num_eval_episodes = 2 # @param {type:"integer"}
-    eval_interval = 50 # @param {type:"integer"}
-    
+    eval_interval = 20 # @param {type:"integer"}
+
 
     # Actor Network
     actor_net = CustomActorNetwork(
