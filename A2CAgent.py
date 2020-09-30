@@ -1,40 +1,33 @@
-# Importing
-# Python Modules
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+
+import base64
 import numpy as nu
 import pandas as pd
 import datetime as dt
 import multiprocessing as mp
 from matplotlib import pyplot as pl
-# Tensorflow Modules
 import tensorflow as tf
 tf.compat.v1.enable_v2_behavior()
 from tensorflow import keras as kr
-from tf_agents.networks import encoding_network, utils
+from tf_agents.agents.reinforce.reinforce_agent import ReinforceAgent
 from tf_agents.networks.network import Network
-from tf_agents.networks.q_network import QNetwork
-from tf_agents.networks.value_network import ValueNetwork
-from tf_agents.agents.ddpg import critic_network
-from tf_agents.agents import DdpgAgent
-from tf_agents.agents.sac import sac_agent, tanh_normal_projection_network
-from tf_agents.drivers import dynamic_step_driver, dynamic_episode_driver
+from tf_agents.drivers import dynamic_step_driver
+from tf_agents.environments import suite_gym
 from tf_agents.environments import tf_py_environment
-from tf_agents.experimental.train import actor, learner, triggers
-from tf_agents.experimental.train.utils import spec_utils, strategy_utils, train_utils
 from tf_agents.eval import metric_utils
 from tf_agents.metrics import tf_metrics
-from tf_agents.networks import actor_distribution_network, normal_projection_network, value_network, q_network
-from tf_agents.policies import greedy_policy, random_tf_policy
-from tf_agents.replay_buffers import tf_uniform_replay_buffer, reverb_replay_buffer, reverb_utils
+from tf_agents.networks import actor_distribution_network
+from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.trajectories import trajectory
-from tf_agents.utils import common, nest_utils
+from tf_agents.policies import greedy_policy, random_tf_policy
+from tf_agents.utils import common
 # Custom Modules
 from BitcoinEnvironment import BTC_JPY_Environment
 
+
 # Model
-# https://www.tensorflow.org/agents/tutorials/8_networks_tutorial?hl=en
 class CustomActorNetwork(Network):
     def __init__(self,
             observation_spec,
@@ -93,7 +86,6 @@ class CustomActorNetwork(Network):
         return tf.nest.pack_sequence_as(self._action_spec, [actions]), network_state
 
 
-
 if __name__ == '__main__':
     mp.freeze_support()
     # Environment
@@ -108,29 +100,23 @@ if __name__ == '__main__':
     print('Environment created.')
 
     # Hyperparameters
-    criticLearningRate = 3e-4
-    actorLearningRate = 3e-4
-
-    critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
-    gamma = 0.99
-    batchSize = 1
-    target_update_tau = 0.005
-
-    critic_observationDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
-    critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
-    # actor_convLayerParams = [(96, 3, 1), (24, 3, 1)]
-    actor_denseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
-
-    _storeYears = 2
-    replayBufferCapacity = int(_storeYears * 4 * 3 * 30 * 24 * 4)
-    warmupEpisodes = int(_storeYears * 4)
+    num_iterations = 300
+    collect_episodes_per_iteration = 10
+    _storeFullEpisodes = 2
+    replayBufferCapacity = int(_storeFullEpisodes * 3 * 30 * 24 * 4)
     validateEpisodes = 2
 
-    num_iterations = 300
-    log_interval = 1000
-    eval_interval = 10000
+    fc_layer_params = (100,)
 
-    # Actor
+    learning_rate = 3e-4 # @param {type:"number"}
+    entropy_coeff = 1e-4
+    log_interval = 25 # @param {type:"integer"}
+    num_eval_episodes = 2 # @param {type:"integer"}
+    eval_interval = 50 # @param {type:"integer"}
+
+    replayBufferCapacity = int(_storeYears * 4 * 3 * 30 * 24 * 4)
+
+    # Actor Network
     actor_net = CustomActorNetwork(
         observation_spec,
         action_spec,
@@ -149,9 +135,8 @@ if __name__ == '__main__':
         name='ActorNetwork'
     )
     print('Actor Network Created.')
-    # Critic Network: we need a Q network to produce f(state, action) -> expected reward(single value)
-    # book p.513-515
-    # https://www.tensorflow.org/agents/api_docs/python/tf_agents/networks/q_network/QNetwork
+
+    # Critic Network
     critic_net = ValueNetwork(
         (observation_spec, action_spec),
         preprocessing_layers=(
@@ -171,33 +156,35 @@ if __name__ == '__main__':
         dtype=tf.float32,
         name='Critic Network'
     )
-    print('Critic Network Created.')
 
-    # DDPG Agent
+    # Agent
+    # https://www.tensorflow.org/agents/api_docs/python/tf_agents/agents/ReinforceAgent
     global_step = tf.compat.v1.train.get_or_create_global_step()
-    tf_agent = DdpgAgent(
+    tf_agent = ReinforceAgent(
         time_step_spec=env.time_step_spec(),
         action_spec=action_spec,
         actor_network=actor_net,
-        critic_network=critic_net,
-        actor_optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=actorLearningRate),
-        critic_optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=criticLearningRate),
-        dqda_clipping=None,
-        td_errors_loss_fn=None,
+        optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate),
+        value_network=critic_net,
+        value_estimation_loss_coef=0.2,
+        advantage_fn=None,
+        use_advantage_loss=True,
         gamma=gamma,
-        reward_scale_factor=1.0,
-        gradient_clipping=None,
+        normalize_returns=False,
+        debug_summaries=True,
         summarize_grads_and_vars=False,
+        entropy_regularization=entropy_coeff,
         train_step_counter=global_step,
-        name='Agent'
+        name='ReinforceAgent'
     )
     tf_agent.initialize()
+    print('A2C Agent Created.')
 
-    # policies
+    # Policies
     evaluate_policy = greedy_policy.GreedyPolicy(tf_agent.policy)
     collect_policy = tf_agent.collect_policy
 
-    # metrics and evaluation
+    # Evaluation
     def compute_avg_return(environment, policy, num_episodes=2):
         total_return = 0.0
         for _ in range(num_episodes):
@@ -211,33 +198,26 @@ if __name__ == '__main__':
         avg_return = total_return / num_episodes
         return avg_return.numpy()[0]
 
-    # create Reply Buffer
-    # https://www.tensorflow.org/agents/tutorials/5_replay_buffers_tutorial
-    # https://www.google.com/url?client=internal-element-cse&cx=016807462989910793636:iigazrvgr1m&q=https://www.tensorflow.org/agents/api_docs/python/tf_agents/replay_buffers/tf_uniform_replay_buffer/TFUniformReplayBuffer&sa=U&ved=2ahUKEwivq9qvnaTrAhXMdXAKHf2nBQYQFjAAegQIBBAB&usg=AOvVaw2elqEhFKUSZf8WeAl53gVK
+    # Replay Buffer
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         data_spec=tf_agent.collect_data_spec,
         batch_size=batchSize,
         max_length=replayBufferCapacity
     )
-    print(tf_agent.collect_data_spec)
     print('Replay Buffer Created, start warming-up ...')
     _startTime = dt.datetime.now()
 
-    # driver for warm-up
-    # https://www.tensorflow.org/agents/api_docs/python/tf_agents/drivers/dynamic_episode_driver/DynamicEpisodeDriver
+    # Drivers
     initial_collect_driver = dynamic_episode_driver.DynamicEpisodeDriver(
         env,
         collect_policy,
         observers=[replay_buffer.add_batch],
-        num_episodes=warmupEpisodes
+        num_episodes=_storeFullEpisodes
     )
     initial_collect_driver.run()
     _timeCost = (dt.datetime.now() - _startTime).total_seconds()
     print('Replay Buffer Warm-up Done. (cost {:.3g} hours)'.format(_timeCost/3600.0))
     _startTime = dt.datetime.now()
-
-
-    # Training
 
     print('Prepare for training ...')
     collect_driver = dynamic_episode_driver.DynamicEpisodeDriver(
@@ -246,31 +226,28 @@ if __name__ == '__main__':
         observers=[replay_buffer.add_batch],
         num_episodes=10
     )
-    # # (Optional) Optimize by wrapping some of the code in a graph using TF function.
-    # tf_agent.train = common.function(tf_agent.train)
-    # collect_driver.run = common.function(collect_driver.run)
-    # Reset the train step
     tf_agent.train_step_counter.assign(0)
-    # Evaluate the agent's policy once before training.
-    avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
+
+    # Initialize avg_return
+    avg_return = compute_avg_return(evaluate_env, evaluate_policy, 1)
     returns = [avg_return]
-    # Main training process
-    dataset = replay_buffer.as_dataset(num_parallel_calls=7, sample_batch_size=batchSize, num_steps=2)
-    iterator = iter(dataset)
+
+    # Training
     _timeCost = (dt.datetime.now() - _startTime).total_seconds()
     print('All preparation is done (cost {:.3g} hours). Start training...'.format(_timeCost/3600.0))
     for _ in range(num_iterations):
         # Collect a few steps using collect_policy and save to the replay buffer.
         collect_driver.run()
-        # Sample a batch of data from the buffer and update the agent's network.
-        experience, unused_info = next(iterator)
+        # Since the A2C is a on-policy method, we gather all experiences for one descent step and have the buffer cleared immediately.
+        experience = replay_buffer.gather_all()
         train_loss = tf_agent.train(experience)
+        replay_buffer.clear()
         step = tf_agent.train_step_counter.numpy()
         # if step % log_interval == 0:
         print('step = {0}: loss = {1}'.format(step, train_loss.loss))
-        # if step % eval_interval == 0:
-        avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
-        print('step = {0}: Average Return = {1}'.format(step, avg_return))
-        returns.append(avg_return)
+        if step % eval_interval == 0:
+            avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
+            print('step = {0}: Average Return = {1}'.format(step, avg_return))
+            returns.append(avg_return)
     pl.plot(returns)
     pl.show()

@@ -177,7 +177,7 @@ if __name__ == '__main__':
     collect_policy = tf_agent.collect_policy
 
     # metrics and evaluation
-    def compute_avg_return(environment, policy, num_episodes=5):
+    def compute_avg_return(environment, policy, num_episodes=2):
         total_return = 0.0
         for _ in range(num_episodes):
             time_step = environment.reset()
