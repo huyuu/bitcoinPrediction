@@ -108,6 +108,9 @@ if __name__ == '__main__':
     print('Environment created.')
 
     # Hyperparameters
+    criticLearningRate = 3e-4
+    actorLearningRate = 3e-4
+
     critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
     gamma = 0.99
     batchSize = 1
@@ -176,6 +179,8 @@ if __name__ == '__main__':
         action_spec=action_spec,
         actor_network=actor_net,
         critic_network=critic_net,
+        actor_optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=actorLearningRate),
+        critic_optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=criticLearningRate),
         dqda_clipping=None,
         td_errors_loss_fn=None,
         gamma=gamma,
@@ -248,7 +253,7 @@ if __name__ == '__main__':
     avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
     returns = [avg_return]
     # Main training process
-    dataset = replay_buffer.as_dataset(num_parallel_calls=7, sample_batch_size=batchSize, num_steps=1)
+    dataset = replay_buffer.as_dataset(num_parallel_calls=7, sample_batch_size=batchSize, num_steps=2)
     iterator = iter(dataset)
     _timeCost = (dt.datetime.now() - _startTime).total_seconds()
     print('All preparation is done (cost {:.3g} hours). Start training...'.format(_timeCost/3600.0))
