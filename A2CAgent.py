@@ -14,7 +14,8 @@ from tensorflow import keras as kr
 from tf_agents.agents.reinforce.reinforce_agent import ReinforceAgent
 from tf_agents.networks import encoding_network, utils
 from tf_agents.networks.network import Network
-from tf_agents.drivers import dynamic_step_driver
+from tf_agents.networks.value_network import ValueNetwork
+from tf_agents.drivers import dynamic_step_driver, dynamic_episode_driver
 from tf_agents.environments import suite_gym
 from tf_agents.environments import tf_py_environment
 from tf_agents.eval import metric_utils
