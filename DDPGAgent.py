@@ -48,7 +48,7 @@ class CustomActorNetwork(Network):
             enable_last_layer_zero_initializer=False,
             name='ActorNetwork'):
         # call super
-        super(CutomActorNetwork, self).__init__(input_tensor_spec=observation_spec, state_spec=(), name=name)
+        super(CustomActorNetwork, self).__init__(input_tensor_spec=observation_spec, state_spec=(), name=name)
         # check action_spec
         self._action_spec = action_spec
         flat_action_spec = tf.nest.flatten(action_spec)
