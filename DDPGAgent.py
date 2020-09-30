@@ -54,6 +54,7 @@ class CustomActorNetwork(Network):
         flat_action_spec = tf.nest.flatten(action_spec)
         if len(flat_action_spec) != 1:
             raise ValueError('flatten action_spec should be len=2, but get len={}'.format(len(flat_action_spec)))
+        self._single_action_spec = flat_action_spec[0]
         # set up kernel_initializer
         kernel_initializer = tf.keras.initializers.VarianceScaling(scale=1. / 3., mode='fan_in', distribution='uniform')
         # set up encoder_network
