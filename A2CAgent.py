@@ -74,20 +74,6 @@ class CustomActorNetwork(Network):
         )
 
 
-    def call(self, observations, step_type=(), network_state=()):
-        outer_rank = nest_utils.get_outer_rank(observations, self.input_tensor_spec)
-        # We use batch_squash here in case the observations have a time sequence
-        # compoment.
-        batch_squash = utils.BatchSquash(outer_rank)
-        observations = tf.nest.map_structure(batch_squash.flatten, observations)
-
-        state, network_state = self._encoder(observations, step_type=step_type, network_state=network_state)
-        actions = self._action_projection_layer(state)
-        actions = common.scale_to_spec(actions, self._single_action_spec)
-        actions = batch_squash.unflatten(actions)
-        return tf.nest.pack_sequence_as(self._action_spec, [actions]), network_state
-
-
 if __name__ == '__main__':
     mp.freeze_support()
     # Environment
@@ -143,18 +129,15 @@ if __name__ == '__main__':
 
     # Critic Network
     critic_net = ValueNetwork(
-        (observation_spec, action_spec),
-        preprocessing_layers=(
-            {
-                'observation_market': kr.models.Sequential([
-                    kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
-                    # kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
-                    kr.layers.Flatten()
-                ]),
-                'observation_holdingRate': kr.layers.Dense(2, activation='sigmoid')
-            },
-            kr.layers.Dense(2, activation='sigmoid')
-        ),
+        observation_spec,
+        preprocessing_layers={
+            'observation_market': kr.models.Sequential([
+                kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
+                # kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
+                kr.layers.Flatten()
+            ]),
+            'observation_holdingRate': kr.layers.Dense(2, activation='sigmoid')
+        }
         preprocessing_combiner=kr.layers.Concatenate(axis=-1),
         conv_layer_params=None,
         fc_layer_params=critic_commonDenseLayerParams,
@@ -213,15 +196,15 @@ if __name__ == '__main__':
     _startTime = dt.datetime.now()
 
     # Drivers
-    initial_collect_driver = dynamic_episode_driver.DynamicEpisodeDriver(
-        env,
-        collect_policy,
-        observers=[replay_buffer.add_batch],
-        num_episodes=_storeFullEpisodes
-    )
-    initial_collect_driver.run()
-    _timeCost = (dt.datetime.now() - _startTime).total_seconds()
-    print('Replay Buffer Warm-up Done. (cost {:.3g} hours)'.format(_timeCost/3600.0))
+    # initial_collect_driver = dynamic_episode_driver.DynamicEpisodeDriver(
+    #     env,
+    #     collect_policy,
+    #     observers=[replay_buffer.add_batch],
+    #     num_episodes=_storeFullEpisodes
+    # )
+    # initial_collect_driver.run()
+    # _timeCost = (dt.datetime.now() - _startTime).total_seconds()
+    # print('Replay Buffer Warm-up Done. (cost {:.3g} hours)'.format(_timeCost/3600.0))
     _startTime = dt.datetime.now()
 
     print('Prepare for training ...')
