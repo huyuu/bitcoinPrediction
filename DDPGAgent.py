@@ -12,10 +12,11 @@ from matplotlib import pyplot as pl
 import tensorflow as tf
 tf.compat.v1.enable_v2_behavior()
 from tensorflow import keras as kr
+from tf_agents.networks import encoding_network, utils
 from tf_agents.networks.network import Network
+from tf_agents.networks.q_network import QNetwork
 from tf_agents.agents.ddpg import critic_network
 from tf_agents.agents import DdpgAgent
-from tf_agents.agents.ddpg.actor_network import ActorNetwork
 from tf_agents.agents.ddpg.critic_network import CriticNetwork
 from tf_agents.agents.sac import sac_agent, tanh_normal_projection_network
 from tf_agents.drivers import dynamic_step_driver, dynamic_episode_driver
@@ -28,9 +29,68 @@ from tf_agents.networks import actor_distribution_network, normal_projection_net
 from tf_agents.policies import greedy_policy, random_tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer, reverb_replay_buffer, reverb_utils
 from tf_agents.trajectories import trajectory
-from tf_agents.utils import common
+from tf_agents.utils import common, nest_utils
 # Custom Modules
 from BitcoinEnvironment import BTC_JPY_Environment
+
+# Model
+# https://www.tensorflow.org/agents/tutorials/8_networks_tutorial?hl=en
+class CustomActorNetwork(Network):
+    def __init__(self,
+            observation_spec,
+            action_spec,
+            preprocessing_layers=None,
+            preprocessing_combiner=None,
+            conv_layer_params=None,
+            fc_layer_params=(75, 40),
+            dropout_layer_params=None,
+            activation_fn=tf.keras.activations.relu,
+            enable_last_layer_zero_initializer=False,
+            name='ActorNetwork'):
+        # call super
+        super(ActorNetwork, self).__init__(input_tensor_spec=observation_spec, state_spec=(), name=name)
+        # check action_spec
+        self._action_spec = action_spec
+        flat_action_spec = tf.nest.flatten(action_spec)
+        if len(flat_action_spec) != 2:
+            raise ValueError('flatten action_spec should be len=2, but get len={}'.format(len(flat_action_spec)))
+        # set up kernel_initializer
+        kernel_initializer = tf.keras.initializers.VarianceScaling(scale=1. / 3., mode='fan_in', distribution='uniform')
+        # set up encoder_network
+        self._encoder = encoding_network.EncodingNetwork(
+            observation_spec,
+            preprocessing_layers=preprocessing_layers,
+            preprocessing_combiner=preprocessing_combiner,
+            conv_layer_params=conv_layer_params,
+            fc_layer_params=fc_layer_params,
+            dropout_layer_params=dropout_layer_params,
+            activation_fn=activation_fn,
+            kernel_initializer=kernel_initializer,
+            batch_squash=False
+        )
+        # set up action_projection layer
+        initializer = tf.keras.initializers.RandomUniform(minval=-0.003, maxval=0.003)
+        self._action_projection_layer = tf.keras.layers.Dense(
+            flat_action_spec[0].shape.num_elements(),
+            activation=tf.keras.activations.tanh,
+            kernel_initializer=initializer,
+            name='action_projection_layer'
+        )
+
+
+    def call(self, observations, step_type=(), network_state=()):
+        outer_rank = nest_utils.get_outer_rank(observations, self.input_tensor_spec)
+        # We use batch_squash here in case the observations have a time sequence
+        # compoment.
+        batch_squash = utils.BatchSquash(outer_rank)
+        observations = tf.nest.map_structure(batch_squash.flatten, observations)
+
+        state, network_state = self._encoder(observations, step_type=step_type, network_state=network_state)
+        actions = self._action_projection_layer(state)
+        actions = common_utils.scale_to_spec(actions, self._single_action_spec)
+        actions = batch_squash.unflatten(actions)
+        return tf.nest.pack_sequence_as(self._action_spec, [actions]), network_state
+
 
 
 if __name__ == '__main__':
@@ -67,9 +127,9 @@ if __name__ == '__main__':
     eval_interval = 10000
 
     # Actor
-    actor_net = actor_distribution_network.ActorDistributionNetwork(
-        input_tensor_spec=observation_spec,
-        output_tensor_spec=action_spec,
+    actor_net = CustomActorNetwork(
+        observation_spec,
+        action_spec,
         preprocessing_layers={
             'observation_market': kr.models.Sequential([
                 kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
@@ -80,14 +140,17 @@ if __name__ == '__main__':
         },
         preprocessing_combiner=kr.layers.Concatenate(axis=-1),
         fc_layer_params=actor_denseLayerParams,
-        dtype=tf.float32,
-        continuous_projection_net=tanh_normal_projection_network.TanhNormalProjectionNetwork,
-        name='ActorDistributionNetwork'
+        activation_fn=tf.keras.activations.relu,
+        enable_last_layer_zero_initializer=False,
+        name='ActorNetwork'
     )
     print('Actor Network Created.')
-    # Critic Network
-    critic_net = value_network.ValueNetwork(
-        (observation_spec, action_spec),
+    # Critic Network: we need a Q network to produce f(state, action) -> expected reward(single value)
+    # book p.513-515
+    # https://www.tensorflow.org/agents/api_docs/python/tf_agents/networks/q_network/QNetwork
+    critic_net = QNetwork(
+        observation_spec,
+        action_spec,
         preprocessing_layers=(
             {
                 'observation_market': kr.models.Sequential([
@@ -102,8 +165,8 @@ if __name__ == '__main__':
         preprocessing_combiner=kr.layers.Concatenate(axis=-1),
         conv_layer_params=None,
         fc_layer_params=critic_commonDenseLayerParams,
-        dtype=tf.float32,
-        name='Critic Network'
+        activation_fn=tf.keras.activations.relu,
+        name='QNetwork'
     )
     print('Critic Network Created.')
     # DDPG Agent
