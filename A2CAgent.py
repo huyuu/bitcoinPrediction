@@ -73,6 +73,20 @@ class CustomActorNetwork(Network):
             name='action_projection_layer'
         )
 
+    def call(self, observations, step_type=(), network_state=()):
+        outer_rank = nest_utils.get_outer_rank(observations, self.input_tensor_spec)
+        # We use batch_squash here in case the observations have a time sequence
+        # compoment.
+        batch_squash = utils.BatchSquash(outer_rank)
+        observations = tf.nest.map_structure(batch_squash.flatten, observations)
+
+        state, network_state = self._encoder(observations, step_type=step_type, network_state=network_state)
+        actions = self._action_projection_layer(state)
+        actions = common.scale_to_spec(actions, self._single_action_spec)
+        actions = batch_squash.unflatten(actions)
+        return tf.nest.pack_sequence_as(self._action_spec, [actions]), network_state
+
+
 
 if __name__ == '__main__':
     mp.freeze_support()
