@@ -105,7 +105,7 @@ if __name__ == '__main__':
     num_iterations = 300
     collect_episodes_per_iteration = 10
     _storeFullEpisodes = 2
-    replayBufferCapacity = int(_storeFullEpisodes * 3 * 30 * 24 * 4)
+    replayBufferCapacity = int(_storeFullEpisodes * env.episodeEndSteps)
     validateEpisodes = 2
 
     critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
