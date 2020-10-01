@@ -226,7 +226,7 @@ if __name__ == '__main__':
         env,
         collect_policy,
         observers=[replay_buffer.add_batch],
-        num_episodes=10
+        num_episodes=2
     )
     tf_agent.train_step_counter.assign(0)
 
