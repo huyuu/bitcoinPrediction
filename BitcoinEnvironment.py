@@ -24,6 +24,8 @@ tf.compat.v1.enable_v2_behavior()
 # custom modules
 from PreprocessingWorker import stringToDate, dateToString
 
+# Hyperparameters
+episodeEndSteps = 4*24*30*1
 
 # Model
 
@@ -59,7 +61,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         self.currentDate = dt.datetime(startDate.year, startDate.month, startDate.day, startDate.hour, (startDate.minute//15)*15, 0)
 
         self.episodeCount = 0
-        self.episodeEndSteps = 4*24*30*1
+        self.episodeEndSteps = episodeEndSteps
         # reward will be clipped to [-1, 1] using reward/(coeff*initAsset)
         self.rewardClipCoeff = 2
 

@@ -26,7 +26,7 @@ from tf_agents.trajectories import trajectory
 from tf_agents.policies import greedy_policy, random_tf_policy
 from tf_agents.utils import common, nest_utils
 # Custom Modules
-from BitcoinEnvironment import BTC_JPY_Environment
+from BitcoinEnvironment import BTC_JPY_Environment, episodeEndSteps
 
 
 # Model
@@ -105,7 +105,7 @@ if __name__ == '__main__':
     num_iterations = 300
     collect_episodes_per_iteration = 10
     _storeFullEpisodes = 2
-    replayBufferCapacity = int(_storeFullEpisodes * env.episodeEndSteps)
+    replayBufferCapacity = int(_storeFullEpisodes * episodeEndSteps)
     validateEpisodes = 2
 
     critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
