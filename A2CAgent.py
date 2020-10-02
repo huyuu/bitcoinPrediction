@@ -26,7 +26,7 @@ from tf_agents.trajectories import trajectory
 from tf_agents.policies import greedy_policy, random_tf_policy
 from tf_agents.utils import common, nest_utils
 # Custom Modules
-from BitcoinEnvironment import BTC_JPY_Environment, episodeEndSteps
+from BitcoinEnvironment import BTC_JPY_Environment
 
 
 # Model
@@ -95,6 +95,8 @@ if __name__ == '__main__':
     # create environment and transfer it to Tensorflow version
     print('Creating environment ...')
     env = BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=True)
+    episodeEndSteps = env.episodeEndSteps
+    gradient_clipping_base = env.rewardClipCoeff*env.initialAsset
     env = tf_py_environment.TFPyEnvironment(env)
     evaluate_env = tf_py_environment.TFPyEnvironment(BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=False))
     observation_spec = env.observation_spec()
@@ -114,7 +116,7 @@ if __name__ == '__main__':
 
     gamma = 0.99
     learning_rate = 1e-6 # @param {type:"number"}
-    entropy_coeff = 1e-6
+    entropy_coeff = 0.1
     num_iterations = 300
     log_interval = 25 # @param {type:"integer"}
     num_eval_episodes = 2 # @param {type:"integer"}
@@ -166,11 +168,12 @@ if __name__ == '__main__':
         actor_network=actor_net,
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate),
         value_network=critic_net,
-        value_estimation_loss_coef=0,
+        value_estimation_loss_coef=0.2,
         advantage_fn=lambda returns, value_preds: returns - value_preds,
         use_advantage_loss=True,
         gamma=gamma,
-        normalize_returns=True,
+        normalize_returns=False,
+        gradient_clipping=gradient_clipping_base,
         debug_summaries=True,
         summarize_grads_and_vars=True,
         entropy_regularization=entropy_coeff,

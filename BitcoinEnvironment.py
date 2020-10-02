@@ -24,8 +24,6 @@ tf.compat.v1.enable_v2_behavior()
 # custom modules
 from PreprocessingWorker import stringToDate, dateToString
 
-# Hyperparameters
-episodeEndSteps = 4*24*30*1
 
 # Model
 
@@ -61,7 +59,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         self.currentDate = dt.datetime(startDate.year, startDate.month, startDate.day, startDate.hour, (startDate.minute//15)*15, 0)
 
         self.episodeCount = 0
-        self.episodeEndSteps = episodeEndSteps
+        self.episodeEndSteps = 4*24*30*1
         # reward will be clipped to [-1, 1] using reward/(coeff*initAsset)
         self.rewardClipCoeff = 2
 
@@ -182,7 +180,8 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         }
         assetAfterAction = nextClosePrice * self.holdingBTC + self.holdingJPY
         deltaAsset = assetAfterAction - assetBeforeAction
-        _stepReward = deltaAsset/(self.rewardClipCoeff*self.initialAsset)/float(self.episodeEndSteps)
+        # _stepReward = deltaAsset/(self.rewardClipCoeff*self.initialAsset)/float(self.episodeEndSteps)
+        _stepReward = deltaAsset
         # print('steps: {:>4}, buy(+)/sell(-) amount of BTC: {:+6.3f}, exc. rate: {:+5.2f}, holdingRate: {:.4f}, BTC: {:.3f}, JPY: {:>8.1f}, asset: {:>8.1f}, reward: {:+10.7f}'.format(self.episodeCount, action[0], action[1], self.holdingRate, self.holdingBTC, self.holdingJPY, self.currentPrice*self.holdingBTC+self.holdingJPY, _stepReward))
         return ts.transition(self.currentState, reward=_stepReward, discount=0.99)
 
