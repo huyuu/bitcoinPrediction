@@ -107,7 +107,7 @@ if __name__ == '__main__':
 
     # Hyperparameters
     batchSize = 1
-    num_iterations = 300
+    num_iterations = int(1e5)
     collect_episodes_per_iteration = 10
     _storeFullEpisodes = 2
     replayBufferCapacity = int(_storeFullEpisodes * episodeEndSteps * batchSize)
@@ -119,7 +119,6 @@ if __name__ == '__main__':
     gamma = 0.99
     learning_rate = 1e-6 # @param {type:"number"}
     entropy_coeff = 0.1
-    num_iterations = 300
     log_interval = 25 # @param {type:"integer"}
     num_eval_episodes = 2 # @param {type:"integer"}
     eval_interval = 20 # @param {type:"integer"}
@@ -190,8 +189,7 @@ if __name__ == '__main__':
         advantage_fn=lambda returns, value_preds: returns - value_preds,
         use_advantage_loss=True,
         gamma=gamma,
-        normalize_returns=False,
-        gradient_clipping=gradient_clipping_base,
+        normalize_returns=True,
         debug_summaries=True,
         summarize_grads_and_vars=True,
         entropy_regularization=None,
