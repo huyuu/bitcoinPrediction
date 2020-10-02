@@ -120,8 +120,8 @@ if __name__ == '__main__':
     learning_rate = 1e-6 # @param {type:"number"}
     entropy_coeff = 0.1
     log_interval = 25 # @param {type:"integer"}
-    num_eval_episodes = 2 # @param {type:"integer"}
-    eval_interval = 20 # @param {type:"integer"}
+    num_eval_episodes = 3 # @param {type:"integer"}
+    eval_interval = 100 # @param {type:"integer"}
 
 
     # Actor Network
@@ -146,7 +146,7 @@ if __name__ == '__main__':
         output_tensor_spec=action_spec,
         preprocessing_layers={
             'observation_market': kr.models.Sequential([
-                kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//1000), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
+                kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//500), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
                 kr.layers.Flatten()
             ]),
             'observation_holdingRate': kr.layers.Dense(1, activation='sigmoid')
@@ -164,7 +164,7 @@ if __name__ == '__main__':
         observation_spec,
         preprocessing_layers={
             'observation_market': kr.models.Sequential([
-                kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//1000), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
+                kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//500), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
                 kr.layers.Flatten()
             ]),
             'observation_holdingRate': kr.layers.Dense(1, activation='sigmoid')
@@ -271,11 +271,11 @@ if __name__ == '__main__':
         _timeCost = (dt.datetime.now() - _startTime).total_seconds()
         _timeCostFromStart = (dt.datetime.now() - _startTimeFromStart).total_seconds()
         if _timeCost <= 60:
-            print('step = {:>5}: loss = {:+10.6f} (cost {:>5.2f} [sec]; {:>.1f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost, _timeCostFromStart/3600.0))
+            print('step = {:>5}: loss = {:+10.6f}  (cost {:>5.2f} [sec]; {:>.2f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost, _timeCostFromStart/3600.0))
         elif _timeCost <= 3600:
-            print('step = {:>5}: loss = {:+10.6f} (cost {:>5.2f} [min]; {:>.1f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost/60.0, _timeCostFromStart/3600.0))
+            print('step = {:>5}: loss = {:+10.6f}  (cost {:>5.2f} [min]; {:>.2f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost/60.0, _timeCostFromStart/3600.0))
         else:
-            print('step = {:>5}: loss = {:+10.6f} (cost {:>5.2f} [hrs]; {:>.1f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost/3600.0, _timeCostFromStart/3600.0))
+            print('step = {:>5}: loss = {:+10.6f}  (cost {:>5.2f} [hrs]; {:>.2f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost/3600.0, _timeCostFromStart/3600.0))
         # evaluate policy and show average return
         if step % eval_interval == 0:
             avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
