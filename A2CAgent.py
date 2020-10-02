@@ -13,6 +13,7 @@ tf.compat.v1.enable_v2_behavior()
 from tensorflow import keras as kr
 from tf_agents.agents.reinforce.reinforce_agent import ReinforceAgent
 from tf_agents.networks import encoding_network, utils
+from tf_agents.networks import actor_distribution_network
 from tf_agents.networks.network import Network
 from tf_agents.networks.value_network import ValueNetwork
 from tf_agents.drivers import dynamic_step_driver, dynamic_episode_driver
@@ -48,7 +49,7 @@ class CustomActorNetwork(Network):
         self._action_spec = action_spec
         flat_action_spec = tf.nest.flatten(action_spec)
         if len(flat_action_spec) != 1:
-            raise ValueError('flatten action_spec should be len=2, but get len={}'.format(len(flat_action_spec)))
+            raise ValueError('flatten action_spec should be len=1, but get len={}'.format(len(flat_action_spec)))
         self._single_action_spec = flat_action_spec[0]
         # set up kernel_initializer
         kernel_initializer = tf.keras.initializers.VarianceScaling(scale=1. / 3., mode='fan_in', distribution='uniform')
@@ -124,9 +125,25 @@ if __name__ == '__main__':
 
 
     # Actor Network
-    actor_net = CustomActorNetwork(
-        observation_spec,
-        action_spec,
+    # actor_net = CustomActorNetwork(
+    #     observation_spec,
+    #     action_spec,
+    #     preprocessing_layers={
+    #         'observation_market': kr.models.Sequential([
+    #             kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//1000), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
+    #             kr.layers.Flatten()
+    #         ]),
+    #         'observation_holdingRate': kr.layers.Dense(1, activation='sigmoid')
+    #     },
+    #     preprocessing_combiner=kr.layers.Concatenate(axis=-1),
+    #     fc_layer_params=actor_denseLayerParams,
+    #     activation_fn=tf.keras.activations.relu,
+    #     enable_last_layer_zero_initializer=False,
+    #     name='ActorNetwork'
+    # )
+    actor_net = actor_distribution_network.ActorDistributionNetwork(
+        input_tensor_spec=observation_spec,
+        output_tensor_spec=action_spec,
         preprocessing_layers={
             'observation_market': kr.models.Sequential([
                 kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//1000), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
@@ -136,9 +153,9 @@ if __name__ == '__main__':
         },
         preprocessing_combiner=kr.layers.Concatenate(axis=-1),
         fc_layer_params=actor_denseLayerParams,
-        activation_fn=tf.keras.activations.relu,
-        enable_last_layer_zero_initializer=False,
-        name='ActorNetwork'
+        dtype=tf.float32,
+        continuous_projection_net=tanh_normal_projection_network.TanhNormalProjectionNetwork,
+        name='ActorDistributionNetwork'
     )
     print('Actor Network Created.')
 
