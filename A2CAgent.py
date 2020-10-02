@@ -113,8 +113,8 @@ if __name__ == '__main__':
 
     batchSize = 1
     gamma = 0.99
-    learning_rate = 3e-4 # @param {type:"number"}
-    entropy_coeff = 1e-4
+    learning_rate = 1e-6 # @param {type:"number"}
+    entropy_coeff = 1e-6
     num_iterations = 300
     log_interval = 25 # @param {type:"integer"}
     num_eval_episodes = 2 # @param {type:"integer"}
@@ -181,7 +181,7 @@ if __name__ == '__main__':
     print('A2C Agent Created.')
 
     # Policies
-    evaluate_policy = greedy_policy.GreedyPolicy(tf_agent.policy)
+    evaluate_policy = tf_agent.policy
     collect_policy = tf_agent.collect_policy
 
     # Evaluation

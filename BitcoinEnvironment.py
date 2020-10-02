@@ -115,9 +115,10 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
     # required
     def _step(self, action):
         if self.__checkIfEpisodeShouldEnd()  == True:
-            reward = (self.currentPrice * self.holdingBTC + self.holdingJPY - self.initialAsset) / (self.rewardClipCoeff*self.initialAsset)
-            print('Episode did ended with reward: {}'.format(reward))
-            return ts.termination(self.currentState, reward)
+            # reward = (self.currentPrice * self.holdingBTC + self.holdingJPY - self.initialAsset) / (self.rewardClipCoeff*self.initialAsset)
+            # print('Episode did ended with reward: {}'.format(reward))
+            # return ts.termination(self.currentState, reward)
+            return ts.termination(self.currentState, 0)
         # if should continue trading
         self.episodeCount += 1
         while True:
