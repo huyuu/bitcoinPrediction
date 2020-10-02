@@ -194,7 +194,7 @@ if __name__ == '__main__':
         gradient_clipping=gradient_clipping_base,
         debug_summaries=True,
         summarize_grads_and_vars=True,
-        entropy_regularization=entropy_coeff,
+        entropy_regularization=None,
         train_step_counter=global_step,
         name='ReinforceAgent'
     )
