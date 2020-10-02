@@ -8,6 +8,7 @@ import pandas as pd
 import datetime as dt
 import multiprocessing as mp
 from matplotlib import pyplot as pl
+import pickle
 import tensorflow as tf
 tf.compat.v1.enable_v2_behavior()
 from tensorflow import keras as kr
@@ -98,7 +99,6 @@ if __name__ == '__main__':
     print('Creating environment ...')
     env = BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=True)
     episodeEndSteps = env.episodeEndSteps
-    gradient_clipping_base = env.rewardClipCoeff*env.initialAsset
     env = tf_py_environment.TFPyEnvironment(env)
     evaluate_env = tf_py_environment.TFPyEnvironment(BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=False))
     observation_spec = env.observation_spec()
@@ -107,9 +107,9 @@ if __name__ == '__main__':
 
     # Hyperparameters
     batchSize = 1
-    num_iterations = int(1e5)
+    num_iterations = 10000
     collect_episodes_per_iteration = 10
-    _storeFullEpisodes = 2
+    _storeFullEpisodes = collect_episodes_per_iteration
     replayBufferCapacity = int(_storeFullEpisodes * episodeEndSteps * batchSize)
     validateEpisodes = 2
 
@@ -252,8 +252,11 @@ if __name__ == '__main__':
     returns = [avg_return]
 
     # Training
+    steps = []
+    losses = []
     _timeCost = (dt.datetime.now() - _startTime).total_seconds()
     print('All preparation is done (cost {:.3g} hours). Start training...'.format(_timeCost/3600.0))
+    _startTimeFromStart = dt.datetime.now()
     for _ in range(num_iterations):
         _startTime = dt.datetime.now()
         # Collect a few steps using collect_policy and save to the replay buffer.
@@ -264,11 +267,38 @@ if __name__ == '__main__':
         replay_buffer.clear()
         step = tf_agent.train_step_counter.numpy()
         # if step % log_interval == 0:
+        # print time cost and loss
         _timeCost = (dt.datetime.now() - _startTime).total_seconds()
-        print('step = {}: loss = {} ({:.3g})'.format(step, train_loss.loss, _timeCost/3600.0))
+        _timeCostFromStart = (dt.datetime.now() - _startTimeFromStart).total_seconds()
+        if _timeCost <= 60:
+            print('step = {:>5}: loss = {:+} (cost {:>5.2f} [sec]; {:>.1f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost, _timeCostFromStart/3600.0))
+        elif _timeCost <= 3600:
+            print('step = {:>5}: loss = {:+} (cost {:>5.2f} [min]; {:>.1f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost/60.0, _timeCostFromStart/3600.0))
+        else:
+            print('step = {:>5}: loss = {:+} (cost {:>5.2f} [hrs]; {:>.1f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost/3600.0, _timeCostFromStart/3600.0))
+        # evaluate policy and show average return
         if step % eval_interval == 0:
             avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
-            print('step = {0}: Average Return = {1}'.format(step, avg_return))
+            print('step = {:>5}: Average Return = {}'.format(step, avg_return))
             returns.append(avg_return)
-    pl.plot(returns)
+            steps.append(step)
+            losses.append(train_loss)
+    # change format
+    returns = nu.array(returns)
+    steps = nu.array(steps)
+    losses = nu.array(losses)
+    # save results
+    with open('returns.pickle', 'wb') as file:
+        pickle.dump(nu.concatenate([steps, returns, losses]), file)
+    # plot
+    pl.xlabel('Step', fontsize=22)
+    pl.ylabel('Returns', fontsize=22)
+    pl.tick_params(labelsize=16)
+    pl.plot(steps, returns)
+    pl.show()
+
+    pl.xlabel('Step', fontsize=22)
+    pl.ylabel('Loss', fontsize=22)
+    pl.tick_params(labelsize=16)
+    pl.plot(steps, losses)
     pl.show()
