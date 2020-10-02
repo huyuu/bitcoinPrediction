@@ -166,7 +166,7 @@ if __name__ == '__main__':
         actor_network=actor_net,
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate),
         value_network=critic_net,
-        value_estimation_loss_coef=0.2,
+        value_estimation_loss_coef=1e-2,
         advantage_fn=None,
         use_advantage_loss=True,
         gamma=gamma,
