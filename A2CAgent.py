@@ -102,7 +102,7 @@ if __name__ == '__main__':
     print('Environment created.')
 
     # Hyperparameters
-    batchSize = 16
+    batchSize = 4
     num_iterations = 300
     collect_episodes_per_iteration = 10
     _storeFullEpisodes = 2
