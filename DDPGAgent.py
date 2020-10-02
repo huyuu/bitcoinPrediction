@@ -126,9 +126,9 @@ if __name__ == '__main__':
     warmupEpisodes = int(_storeYears * 4)
     validateEpisodes = 2
 
-    num_iterations = 300
+    num_iterations = 10000
     log_interval = 1000
-    eval_interval = 10000
+    eval_interval = 100
 
     # Actor
     actor_net = CustomActorNetwork(
@@ -252,25 +252,46 @@ if __name__ == '__main__':
     # Reset the train step
     tf_agent.train_step_counter.assign(0)
     # Evaluate the agent's policy once before training.
-    avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
-    returns = [avg_return]
+    # avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
+    # returns = [avg_return]
     # Main training process
     dataset = replay_buffer.as_dataset(num_parallel_calls=7, sample_batch_size=batchSize, num_steps=2)
     iterator = iter(dataset)
     _timeCost = (dt.datetime.now() - _startTime).total_seconds()
+    returns = []
+    steps = []
+    losses = []
     print('All preparation is done (cost {:.3g} hours). Start training...'.format(_timeCost/3600.0))
+    _startTimeFromStart = dt.datetime.now()
     for _ in range(num_iterations):
+        _startTime = dt.datetime.now()
         # Collect a few steps using collect_policy and save to the replay buffer.
         collect_driver.run()
         # Sample a batch of data from the buffer and update the agent's network.
         experience, unused_info = next(iterator)
         train_loss = tf_agent.train(experience)
         step = tf_agent.train_step_counter.numpy()
+        # show the loss and time cost
+        _timeCost = (dt.datetime.now() - _startTime).total_seconds()
+        _timeCostFromStart = (dt.datetime.now() - _startTimeFromStart).total_seconds()
+        if _timeCost <= 60:
+            print('step = {:>5}: loss = {:+10.6f}  (cost {:>5.2f} [sec]; {:>.2f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost, _timeCostFromStart/3600.0))
+        elif _timeCost <= 3600:
+            print('step = {:>5}: loss = {:+10.6f}  (cost {:>5.2f} [min]; {:>.2f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost/60.0, _timeCostFromStart/3600.0))
+        else:
+            print('step = {:>5}: loss = {:+10.6f}  (cost {:>5.2f} [hrs]; {:>.2f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost/3600.0, _timeCostFromStart/3600.0))
         # if step % log_interval == 0:
         print('step = {0}: loss = {1}'.format(step, train_loss.loss))
-        # if step % eval_interval == 0:
-        avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
-        print('step = {0}: Average Return = {1}'.format(step, avg_return))
-        returns.append(avg_return)
+        if step % eval_interval == 0:
+            avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
+            print('step = {0}: Average Return = {1}'.format(step, avg_return))
+            returns.append(avg_return)
+            steps.append(step)
+            losses.append(train_loss)
+    # change format
+    returns = nu.array(returns)
+    steps = nu.array(steps)
+    losses = nu.array(losses)
+    # plot
     pl.plot(returns)
     pl.show()

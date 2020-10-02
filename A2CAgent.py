@@ -248,10 +248,11 @@ if __name__ == '__main__':
     tf_agent.train_step_counter.assign(0)
 
     # Initialize avg_return
-    avg_return = compute_avg_return(evaluate_env, evaluate_policy, 1)
-    returns = [avg_return]
+    # avg_return = compute_avg_return(evaluate_env, evaluate_policy, 1)
+    # returns = [avg_return]
 
     # Training
+    returns = []
     steps = []
     losses = []
     _timeCost = (dt.datetime.now() - _startTime).total_seconds()
