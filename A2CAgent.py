@@ -102,6 +102,7 @@ if __name__ == '__main__':
     print('Environment created.')
 
     # Hyperparameters
+    batchSize = 16
     num_iterations = 300
     collect_episodes_per_iteration = 10
     _storeFullEpisodes = 2
@@ -111,7 +112,6 @@ if __name__ == '__main__':
     critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
     actor_denseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
 
-    batchSize = 16
     gamma = 0.99
     learning_rate = 1e-6 # @param {type:"number"}
     entropy_coeff = 1e-6
