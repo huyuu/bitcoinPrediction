@@ -108,13 +108,13 @@ if __name__ == '__main__':
     print('Environment created.')
 
     # Hyperparameters
-    criticLearningRate = 3e-4
-    actorLearningRate = 3e-4
+    criticLearningRate = 1e-6
+    actorLearningRate = 1e-6
 
     critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
     gamma = 0.99
     batchSize = 1
-    target_update_tau = 0.005
+    target_update_tau = 1e-4
 
     critic_observationDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
     critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
@@ -281,7 +281,7 @@ if __name__ == '__main__':
         else:
             print('step = {:>5}: loss = {:+10.6f}  (cost {:>5.2f} [hrs]; {:>.2f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost/3600.0, _timeCostFromStart/3600.0))
         # if step % log_interval == 0:
-        print('step = {0}: loss = {1}'.format(step, train_loss.loss))
+        # print('step = {0}: loss = {1}'.format(step, train_loss.loss))
         if step % eval_interval == 0:
             avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
             print('step = {0}: Average Return = {1}'.format(step, avg_return))
