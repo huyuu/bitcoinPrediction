@@ -271,11 +271,11 @@ if __name__ == '__main__':
         _timeCost = (dt.datetime.now() - _startTime).total_seconds()
         _timeCostFromStart = (dt.datetime.now() - _startTimeFromStart).total_seconds()
         if _timeCost <= 60:
-            print('step = {:>5}: loss = {:+} (cost {:>5.2f} [sec]; {:>.1f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost, _timeCostFromStart/3600.0))
+            print('step = {:>5}: loss = {:+10.6f} (cost {:>5.2f} [sec]; {:>.1f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost, _timeCostFromStart/3600.0))
         elif _timeCost <= 3600:
-            print('step = {:>5}: loss = {:+} (cost {:>5.2f} [min]; {:>.1f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost/60.0, _timeCostFromStart/3600.0))
+            print('step = {:>5}: loss = {:+10.6f} (cost {:>5.2f} [min]; {:>.1f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost/60.0, _timeCostFromStart/3600.0))
         else:
-            print('step = {:>5}: loss = {:+} (cost {:>5.2f} [hrs]; {:>.1f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost/3600.0, _timeCostFromStart/3600.0))
+            print('step = {:>5}: loss = {:+10.6f} (cost {:>5.2f} [hrs]; {:>.1f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost/3600.0, _timeCostFromStart/3600.0))
         # evaluate policy and show average return
         if step % eval_interval == 0:
             avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
