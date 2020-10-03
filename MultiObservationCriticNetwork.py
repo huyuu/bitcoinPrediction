@@ -87,12 +87,7 @@ class MultiObservationCriticNetwork(network.Network):
 
     observation_spec, action_spec = input_tensor_spec
 
-    if len(tf.nest.flatten(observation_spec)) > 1:
-        raise ValueError('Only a single observation is supported by this network')
-
     flat_action_spec = tf.nest.flatten(action_spec)
-    if len(flat_action_spec) > 1:
-        raise ValueError('Only a single action is supported by this network')
     self._single_action_spec = flat_action_spec[0]
     # set up kernel_initializer
     if kernel_initializer is None:

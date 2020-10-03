@@ -88,11 +88,11 @@ if __name__ == '__main__':
         input_tensor_spec=observation_spec,
         output_tensor_spec=action_spec,
         preprocessing_layers={
-            # 'observation_market': kr.models.Sequential([
-            #     kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
-            #     kr.layers.Flatten()
-            # ]),
-            'observation_market': kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
+            'observation_market': kr.models.Sequential([
+                kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1), training=True),
+                kr.layers.Flatten(training=True)
+            ]),
+            # 'observation_market': kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
             'observation_holdingRate': kr.layers.Dense(1, activation='tanh')
         },
         preprocessing_combiner=kr.layers.Concatenate(axis=-1),
@@ -107,11 +107,11 @@ if __name__ == '__main__':
     critic_net = ValueNetwork(
         observation_spec,
         preprocessing_layers={
-            # 'observation_market': kr.models.Sequential([
-            #     kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
-            #     kr.layers.Flatten()
-            # ]),
-            'observation_market': kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
+            'observation_market': kr.models.Sequential([
+                kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1), training=True),
+                kr.layers.Flatten(training=True)
+            ]),
+            # 'observation_market': kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
             'observation_holdingRate': kr.layers.Dense(1, activation='tanh')
         },
         preprocessing_combiner=kr.layers.Concatenate(axis=-1),
