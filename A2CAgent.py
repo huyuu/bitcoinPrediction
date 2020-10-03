@@ -39,10 +39,11 @@ if __name__ == '__main__':
 
     # create environment and transfer it to Tensorflow version
     print('Creating environment ...')
-    env = BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=True)
+    gamma = 0.999
+    env = BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=True, shouldGiveRewardsFinally=True, gamma=gamma)
     episodeEndSteps = env.episodeEndSteps
     env = tf_py_environment.TFPyEnvironment(env)
-    evaluate_env = tf_py_environment.TFPyEnvironment(BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=False))
+    evaluate_env = tf_py_environment.TFPyEnvironment(BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=False, shouldGiveRewardsFinally=True, gamma=gamma))
     observation_spec = env.observation_spec()
     action_spec = env.action_spec()
     print('Environment created.')
@@ -53,18 +54,16 @@ if __name__ == '__main__':
     collect_episodes_per_iteration = 10
     _storeFullEpisodes = collect_episodes_per_iteration
     replayBufferCapacity = int(_storeFullEpisodes * episodeEndSteps * batchSize)
-    validateEpisodes = 2
 
     # observationConvParams = [(int(observation_spec['observation_market'].shape[0]//100), 3, 1)]
     critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//100)]
     actor_denseLayerParams = [int(observation_spec['observation_market'].shape[0]//100)]
 
-    gamma = 0.99
     learning_rate = 1e-6 # @param {type:"number"}
     entropy_coeff = 0.1
     log_interval = 25 # @param {type:"integer"}
-    num_eval_episodes = 3 # @param {type:"integer"}
     eval_interval = 100 # @param {type:"integer"}
+    validateEpisodes = 3
 
 
     # Actor Network
@@ -139,7 +138,7 @@ if __name__ == '__main__':
         summarize_grads_and_vars=True,
         entropy_regularization=None,
         train_step_counter=global_step,
-        name='ReinforceAgent'
+        name='A2CAgent'
     )
     tf_agent.initialize()
     print('A2C Agent Created.')
@@ -234,7 +233,7 @@ if __name__ == '__main__':
     steps = nu.array(steps)
     losses = nu.array(losses)
     # save results
-    with open('returns.pickle', 'wb') as file:
+    with open('A2CAgent_results.pickle', 'wb') as file:
         pickle.dump(nu.concatenate([steps, returns, losses]), file)
     # plot
     pl.xlabel('Step', fontsize=22)

@@ -100,9 +100,11 @@ if __name__ == '__main__':
 
     # create environment and transfer it to Tensorflow version
     print('Creating environment ...')
-    env = BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=True)
+    gamma = 0.999
+    env = BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=True, shouldGiveRewardsFinally=True, gamma=gamma)
+    episodeEndSteps = env.episodeEndSteps
     env = tf_py_environment.TFPyEnvironment(env)
-    evaluate_env = tf_py_environment.TFPyEnvironment(BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=False))
+    evaluate_env = tf_py_environment.TFPyEnvironment(BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=False, shouldGiveRewardsFinally=True, gamma=gamma))
     observation_spec = env.observation_spec()
     action_spec = env.action_spec()
     print('Environment created.')
@@ -111,7 +113,6 @@ if __name__ == '__main__':
     criticLearningRate = 1e-6
     actorLearningRate = 1e-6
 
-    gamma = 0.99
     batchSize = 1
     target_update_tau = 1e-4
 
@@ -120,14 +121,15 @@ if __name__ == '__main__':
     # actor_convLayerParams = [(96, 3, 1), (24, 3, 1)]
     actor_denseLayerParams = [int(observation_spec['observation_market'].shape[0]//100)]
 
-    _storeYears = 2
-    replayBufferCapacity = int(_storeYears * 4 * 3 * 30 * 24 * 4)
-    warmupEpisodes = int(_storeYears * 4)
-    validateEpisodes = 2
-
     num_iterations = 10000
     log_interval = 1000
     eval_interval = 100
+    collect_episodes_per_iteration = 10
+    _storeFullEpisodes = collect_episodes_per_iteration
+    replayBufferCapacity = int(_storeFullEpisodes * episodeEndSteps * batchSize)
+    warmupEpisodes = collect_episodes_per_iteration
+    validateEpisodes = 2
+
 
     # Actor
     actor_net = CustomActorNetwork(
@@ -208,7 +210,7 @@ if __name__ == '__main__':
         gradient_clipping=None,
         summarize_grads_and_vars=False,
         train_step_counter=global_step,
-        name='Agent'
+        name='DDPGAgent'
     )
     tf_agent.initialize()
 
@@ -263,7 +265,7 @@ if __name__ == '__main__':
         env,
         collect_policy,
         observers=[replay_buffer.add_batch],
-        num_episodes=10
+        num_episodes=collect_episodes_per_iteration
     )
     # # (Optional) Optimize by wrapping some of the code in a graph using TF function.
     # tf_agent.train = common.function(tf_agent.train)
@@ -311,6 +313,9 @@ if __name__ == '__main__':
     returns = nu.array(returns)
     steps = nu.array(steps)
     losses = nu.array(losses)
+    # save results
+    with open('DDPGAgent_results.pickle', 'wb') as file:
+        pickle.dump(nu.concatenate([steps, returns, losses]), file)
     # plot
     pl.plot(returns)
     pl.show()

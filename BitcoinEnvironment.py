@@ -32,7 +32,7 @@ def getGraphData(path):
 
 
 class BTC_JPY_Environment(py_environment.PyEnvironment):
-    def __init__(self, imageWidth, imageHeight, initialAsset, dtype=nu.float32, isHugeMemorryMode=True):
+    def __init__(self, imageWidth, imageHeight, initialAsset, dtype=nu.float32, isHugeMemorryMode=True, shouldGiveRewardsFinally=True, gamma=0.99):
         self.dtype = dtype
         self.__actionSpec = BoundedArraySpec(shape=(2,), dtype=self.dtype, minimum=-1, maximum=1, name='action')
         # https://www.tensorflow.org/agents/api_docs/python/tf_agents/environments/py_environment/PyEnvironment#observation_spec
@@ -72,6 +72,8 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             # self.graphData = { path: pd.read_csv(f'./LabeledData/graphData/{path}', index_col=0).values for path in os.listdir('./LabeledData/graphData') if path.split('.')[1] == 'csv' }
         else:
             self.graphData = None
+        self.shouldGiveRewardsFinally = shouldGiveRewardsFinally
+        self.gamma = gamma
 
 
     # required
@@ -120,10 +122,12 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
     # required
     def _step(self, action):
         if self.__checkIfEpisodeShouldEnd()  == True:
-            # reward = (self.currentPrice * self.holdingBTC + self.holdingJPY - self.initialAsset) / (self.rewardClipCoeff*self.initialAsset)
-            # print('Episode did ended with reward: {}'.format(reward))
-            # return ts.termination(self.currentState, reward)
-            return ts.termination(self.currentState, 0)
+            if self.shouldGiveRewardsFinally:
+                reward = (nextClosePrice * self.holdingBTC + self.holdingJPY - self.initialAsset) / (self.rewardClipCoeff*self.initialAsset)
+                # print('Episode did ended with reward: {}'.format(reward))
+                return ts.termination(self.currentState, reward)
+            else:
+                return ts.termination(self.currentState, 0)
         # if should continue trading
         self.episodeCount += 1
         while True:
@@ -189,13 +193,16 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             'observation_market': nextMarketSnapshot,
             'observation_holdingRate': nu.array([self.holdingRate], dtype=self.dtype)
         }
-        assetAfterAction = nextClosePrice * self.holdingBTC + self.holdingJPY
-        deltaAsset = assetAfterAction - assetBeforeAction
-        # _stepReward = deltaAsset/(self.rewardClipCoeff*self.initialAsset)/float(self.episodeEndSteps)
-        # _stepReward = deltaAsset
-        _stepReward = deltaAsset/(self.rewardClipCoeff*self.initialAsset)
-        # print('steps: {:>4}, buy(+)/sell(-) amount of BTC: {:+6.3f}, exc. rate: {:+5.2f}, holdingRate: {:.4f}, BTC: {:.3f}, JPY: {:>8.1f}, asset: {:>8.1f}, reward: {:+10.7f}'.format(self.episodeCount, action[0], action[1], self.holdingRate, self.holdingBTC, self.holdingJPY, self.currentPrice*self.holdingBTC+self.holdingJPY, _stepReward))
-        return ts.transition(self.currentState, reward=_stepReward, discount=0.99)
+        # returns
+        if not self.shouldGiveRewardsFinally:
+            assetAfterAction = nextClosePrice * self.holdingBTC + self.holdingJPY
+            deltaAsset = assetAfterAction - assetBeforeAction
+            _stepReward = deltaAsset/(self.rewardClipCoeff*self.initialAsset)
+            # print('steps: {:>4}, buy(+)/sell(-) amount of BTC: {:+6.3f}, exc. rate: {:+5.2f}, holdingRate: {:.4f}, BTC: {:.3f}, JPY: {:>8.1f}, asset: {:>8.1f}, reward: {:+10.7f}'.format(self.episodeCount, action[0], action[1], self.holdingRate, self.holdingBTC, self.holdingJPY, self.currentPrice*self.holdingBTC+self.holdingJPY, _stepReward))
+            return ts.transition(self.currentState, reward=_stepReward, discount=self.gamma)
+        else:
+            # print('steps: {:>4}, buy(+)/sell(-) amount of BTC: {:+6.3f}, exc. rate: {:+5.2f}, holdingRate: {:.4f}, BTC: {:.3f}, JPY: {:>8.1f}, asset: {:>8.1f}'.format(self.episodeCount, action[0], action[1], self.holdingRate, self.holdingBTC, self.holdingJPY, self.currentPrice*self.holdingBTC+self.holdingJPY))
+            return ts.transition(self.currentState, reward=0, discount=self.gamma)
 
 
     def __checkIfEpisodeShouldEnd(self):
