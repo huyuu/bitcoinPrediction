@@ -125,7 +125,11 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             # get next data
             nextData = self.data.loc[self.data['DateTypeDate']==self.currentDate, :]
             if len(nextData['Open'].values.ravel()) != 0:
-                break
+                _graphPath = './LabeledData/graphData/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
+                if os.path.exists(_graphPath):
+                    break
+                else:
+                    continue
             else:
                 continue
         self.currentPrice = nextData['Open'].values.ravel()[0]

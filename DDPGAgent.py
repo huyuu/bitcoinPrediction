@@ -44,8 +44,7 @@ class CustomActorNetwork(Network):
             conv_layer_params=None,
             fc_layer_params=(75, 40),
             dropout_layer_params=None,
-            activation_fn=tf.keras.activations.relu,
-            enable_last_layer_zero_initializer=False,
+            # enable_last_layer_zero_initializer=False,
             name='ActorNetwork'):
         # call super
         super(CustomActorNetwork, self).__init__(input_tensor_spec=observation_spec, state_spec=(), name=name)
@@ -65,7 +64,7 @@ class CustomActorNetwork(Network):
             conv_layer_params=conv_layer_params,
             fc_layer_params=fc_layer_params,
             dropout_layer_params=dropout_layer_params,
-            activation_fn=activation_fn,
+            activation_fn=tf.keras.activations.relu,
             # kernel_initializer=kernel_initializer,
             batch_squash=False
         )
@@ -111,15 +110,14 @@ if __name__ == '__main__':
     criticLearningRate = 1e-6
     actorLearningRate = 1e-6
 
-    critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
     gamma = 0.99
     batchSize = 1
     target_update_tau = 1e-4
 
-    critic_observationDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
-    critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
+    critic_observationDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//100)]
+    critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//100)]
     # actor_convLayerParams = [(96, 3, 1), (24, 3, 1)]
-    actor_denseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
+    actor_denseLayerParams = [int(observation_spec['observation_market'].shape[0]//100)]
 
     _storeYears = 2
     replayBufferCapacity = int(_storeYears * 4 * 3 * 30 * 24 * 4)
@@ -136,34 +134,34 @@ if __name__ == '__main__':
         action_spec,
         preprocessing_layers={
             'observation_market': kr.models.Sequential([
-                kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//500), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
+                kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
                 # kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
                 kr.layers.Flatten()
             ]),
-            'observation_holdingRate': kr.layers.Dense(2, activation='sigmoid')
+            'observation_holdingRate': kr.layers.Dense(1, activation='tanh')
         },
         preprocessing_combiner=kr.layers.Concatenate(axis=-1),
         fc_layer_params=actor_denseLayerParams,
-        activation_fn=tf.keras.activations.relu,
-        enable_last_layer_zero_initializer=False,
+        # enable_last_layer_zero_initializer=False,
         name='ActorNetwork'
     )
     print('Actor Network Created.')
     # Critic Network: we need a Q network to produce f(state, action) -> expected reward(single value)
     # book p.513-515
     # https://www.tensorflow.org/agents/api_docs/python/tf_agents/networks/q_network/QNetwork
+    # https://www.tensorflow.org/agents/api_docs/python/tf_agents/networks/value_network/ValueNetwork
     critic_net = ValueNetwork(
         (observation_spec, action_spec),
         preprocessing_layers=(
             {
                 'observation_market': kr.models.Sequential([
-                    kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//500), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
+                    kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
                     # kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
                     kr.layers.Flatten()
                 ]),
-                'observation_holdingRate': kr.layers.Dense(2, activation='sigmoid')
+                'observation_holdingRate': kr.layers.Dense(1, activation='tanh')
             },
-            kr.layers.Dense(2, activation='sigmoid')
+            kr.layers.Dense(1, activation='tanh')
         ),
         preprocessing_combiner=kr.layers.Concatenate(axis=-1),
         conv_layer_params=None,

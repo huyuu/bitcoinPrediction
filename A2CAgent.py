@@ -32,64 +32,6 @@ from tf_agents.utils import common, nest_utils
 from BitcoinEnvironment import BTC_JPY_Environment
 
 
-# Model
-class CustomActorNetwork(Network):
-    def __init__(self,
-            observation_spec,
-            action_spec,
-            preprocessing_layers=None,
-            preprocessing_combiner=None,
-            conv_layer_params=None,
-            fc_layer_params=(75, 40),
-            dropout_layer_params=None,
-            activation_fn=tf.keras.activations.relu,
-            enable_last_layer_zero_initializer=False,
-            name='ActorNetwork'):
-        # call super
-        super(CustomActorNetwork, self).__init__(input_tensor_spec=observation_spec, state_spec=(), name=name)
-        # check action_spec
-        self._action_spec = action_spec
-        flat_action_spec = tf.nest.flatten(action_spec)
-        if len(flat_action_spec) != 1:
-            raise ValueError('flatten action_spec should be len=1, but get len={}'.format(len(flat_action_spec)))
-        self._single_action_spec = flat_action_spec[0]
-        # set up kernel_initializer
-        kernel_initializer = tf.keras.initializers.VarianceScaling(scale=1. / 3., mode='fan_in', distribution='uniform')
-        # set up encoder_network
-        self._encoder = encoding_network.EncodingNetwork(
-            observation_spec,
-            preprocessing_layers=preprocessing_layers,
-            preprocessing_combiner=preprocessing_combiner,
-            conv_layer_params=conv_layer_params,
-            fc_layer_params=fc_layer_params,
-            dropout_layer_params=dropout_layer_params,
-            activation_fn=activation_fn,
-            kernel_initializer=kernel_initializer,
-            batch_squash=False
-        )
-        # set up action_projection layer
-        initializer = tf.keras.initializers.RandomUniform(minval=-0.3, maxval=0.3)
-        self._action_projection_layer = tf.keras.layers.Dense(
-            flat_action_spec[0].shape.num_elements(),
-            activation=tf.keras.activations.tanh,
-            kernel_initializer=initializer,
-            name='action_projection_layer'
-        )
-
-    def call(self, observations, step_type=(), network_state=()):
-        outer_rank = nest_utils.get_outer_rank(observations, self.input_tensor_spec)
-        # We use batch_squash here in case the observations have a time sequence
-        # compoment.
-        batch_squash = utils.BatchSquash(outer_rank)
-        observations = tf.nest.map_structure(batch_squash.flatten, observations)
-
-        state, network_state = self._encoder(observations, step_type=step_type, network_state=network_state)
-        actions = self._action_projection_layer(state)
-        actions = common.scale_to_spec(actions, self._single_action_spec)
-        actions = batch_squash.unflatten(actions)
-        return tf.nest.pack_sequence_as(self._action_spec, [actions]), network_state
-
-
 
 if __name__ == '__main__':
     mp.freeze_support()
@@ -113,8 +55,8 @@ if __name__ == '__main__':
     replayBufferCapacity = int(_storeFullEpisodes * episodeEndSteps * batchSize)
     validateEpisodes = 2
 
-    critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
-    actor_denseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
+    critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//100)]
+    actor_denseLayerParams = [int(observation_spec['observation_market'].shape[0]//100)]
 
     gamma = 0.99
     learning_rate = 1e-6 # @param {type:"number"}
@@ -146,10 +88,10 @@ if __name__ == '__main__':
         output_tensor_spec=action_spec,
         preprocessing_layers={
             'observation_market': kr.models.Sequential([
-                kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//500), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
+                kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
                 kr.layers.Flatten()
             ]),
-            'observation_holdingRate': kr.layers.Dense(1, activation='sigmoid')
+            'observation_holdingRate': kr.layers.Dense(1, activation='tanh')
         },
         preprocessing_combiner=kr.layers.Concatenate(axis=-1),
         fc_layer_params=actor_denseLayerParams,
@@ -164,7 +106,7 @@ if __name__ == '__main__':
         observation_spec,
         preprocessing_layers={
             'observation_market': kr.models.Sequential([
-                kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//500), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
+                kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
                 kr.layers.Flatten()
             ]),
             'observation_holdingRate': kr.layers.Dense(1, activation='sigmoid')
@@ -192,7 +134,7 @@ if __name__ == '__main__':
         normalize_returns=True,
         debug_summaries=True,
         summarize_grads_and_vars=True,
-        entropy_regularization=None,
+        entropy_regularization=0.2,
         train_step_counter=global_step,
         name='ReinforceAgent'
     )
