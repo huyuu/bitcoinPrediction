@@ -123,7 +123,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
     def _step(self, action):
         if self.__checkIfEpisodeShouldEnd()  == True:
             if self.shouldGiveRewardsFinally:
-                reward = (nextClosePrice * self.holdingBTC + self.holdingJPY - self.initialAsset) / (self.rewardClipCoeff*self.initialAsset)
+                reward = (self.currentPrice * self.holdingBTC + self.holdingJPY - self.initialAsset) / (self.rewardClipCoeff*self.initialAsset)
                 # print('Episode did ended with reward: {}'.format(reward))
                 return ts.termination(self.currentState, reward)
             else:
