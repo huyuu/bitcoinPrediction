@@ -124,11 +124,11 @@ if __name__ == '__main__':
     num_iterations = 10000
     log_interval = 1000
     eval_interval = 100
-    collect_episodes_per_iteration = 10
-    _storeFullEpisodes = collect_episodes_per_iteration
+    collect_episodes_per_iteration = 5
+    _storeFullEpisodes = 20
     replayBufferCapacity = int(_storeFullEpisodes * episodeEndSteps * batchSize)
-    warmupEpisodes = collect_episodes_per_iteration
-    validateEpisodes = 2
+    warmupEpisodes = _storeFullEpisodes
+    validateEpisodes = 3
 
 
     # Actor
