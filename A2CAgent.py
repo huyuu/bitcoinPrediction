@@ -67,22 +67,8 @@ if __name__ == '__main__':
 
 
     # Actor Network
-    # actor_net = CustomActorNetwork(
-    #     observation_spec,
-    #     action_spec,
-    #     preprocessing_layers={
-    #         'observation_market': kr.models.Sequential([
-    #             kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//1000), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
-    #             kr.layers.Flatten()
-    #         ]),
-    #         'observation_holdingRate': kr.layers.Dense(1, activation='sigmoid')
-    #     },
-    #     preprocessing_combiner=kr.layers.Concatenate(axis=-1),
-    #     fc_layer_params=actor_denseLayerParams,
-    #     activation_fn=tf.keras.activations.relu,
-    #     enable_last_layer_zero_initializer=False,
-    #     name='ActorNetwork'
-    # )
+    # A2C or REINFORCE Agent has an actor giving the distribution (or the mean and variance) of actions,
+    # so an actorDistributionNetwork is needed, not ones who directly return actions.
     actor_net = actor_distribution_network.ActorDistributionNetwork(
         input_tensor_spec=observation_spec,
         output_tensor_spec=action_spec,

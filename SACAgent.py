@@ -27,7 +27,7 @@ from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 # Custom Modules
 from BitcoinEnvironment import BTC_JPY_Environment
-
+from MultiObservationCriticNetwork import MultiObservationCriticNetwork
 
 
 if __name__ == '__main__':
@@ -35,10 +35,12 @@ if __name__ == '__main__':
     # Environment
 
     # create environment and transfer it to Tensorflow version
+    gamma = 0.999
     print('Creating environment ...')
-    env = BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=True)
+    env = BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=True, shouldGiveRewardsFinally=True, gamma=gamma)
+    episodeEndSteps = env.episodeEndSteps
     env = tf_py_environment.TFPyEnvironment(env)
-    evaluate_env = tf_py_environment.TFPyEnvironment(BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=False))
+    evaluate_env = tf_py_environment.TFPyEnvironment(BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=False, shouldGiveRewardsFinally=True, gamma=gamma))
     observation_spec = env.observation_spec()
     action_spec = env.action_spec()
     print('Environment created.')
@@ -50,64 +52,71 @@ if __name__ == '__main__':
     # Hyperparameters
 
     batchSize = 1
+    num_iterations = int(1e5)
+    log_interval = 2
+    eval_interval = 1000
 
-    criticLearningRate = 3e-4
-    actorLearningRate = 3e-4
-    alphaLearningRate = 3e-4
+    criticLearningRate = 1e-6
+    actorLearningRate = 1e-6
+    alphaLearningRate = 1e-6
 
-    gamma = 0.99
     gradientClipping = None
-    target_update_tau = 0.005
+    target_update_tau = 1e-4
 
     # (num_units, kernel_size, stride)
     # critic_observationConvLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
-    critic_observationDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
-    critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
-    # actor_convLayerParams = [(96, 3, 1), (24, 3, 1)]
-    actor_denseLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
+    critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//100)]
+    actor_denseLayerParams = [int(observation_spec['observation_market'].shape[0]//100)]
 
-    _storeYears = 2
-    replayBufferCapacity = int(_storeYears * 4 * 3 * 30 * 24 * 4)
-    warmupEpisodes = int(_storeYears * 4)
-    validateEpisodes = 2
-
-    num_iterations = 300
-    log_interval = 2
-    eval_interval = 20
+    collect_episodes_per_iteration = 5
+    _storeFullEpisodes = 20
+    replayBufferCapacity = int(_storeFullEpisodes * episodeEndSteps * batchSize)
+    warmupEpisodes = _storeFullEpisodes
+    validateEpisodes = 3
 
 
     # Models
 
     # create Crite Network
     # https://www.tensorflow.org/agents/api_docs/python/tf_agents/agents/ddpg/critic_network/CriticNetwork
-    # critic_net = critic_network.CriticNetwork(
+    # critic_net = value_network.ValueNetwork(
     #     (observation_spec, action_spec),
-    #     observation_fc_layer_params=critic_observationDenseLayerParams,
-    #     action_fc_layer_params=None,
-    #     joint_fc_layer_params=critic_commonDenseLayerParams,
+    #     preprocessing_layers=(
+    #         {
+    #             'observation_market': kr.models.Sequential([
+    #                 kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
+    #                 # kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
+    #                 kr.layers.Flatten()
+    #             ]),
+    #             'observation_holdingRate': kr.layers.Dense(1, activation='sigmoid')
+    #         },
+    #         kr.layers.Dense(1, activation='sigmoid')
+    #     ),
+    #     preprocessing_combiner=kr.layers.Concatenate(axis=-1),
+    #     conv_layer_params=None,
+    #     fc_layer_params=critic_commonDenseLayerParams,
     #     dtype=tf.float32,
     #     name='Critic Network'
     # )
-    # with strategy.scope():
-    critic_net = value_network.ValueNetwork(
+    critic_net = MultiObservationCriticNetwork(
         (observation_spec, action_spec),
-        preprocessing_layers=(
-            {
-                'observation_market': kr.models.Sequential([
-                    kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
-                    # kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
-                    kr.layers.Flatten()
-                ]),
-                'observation_holdingRate': kr.layers.Dense(1, activation='sigmoid')
-            },
-            kr.layers.Dense(1, activation='sigmoid')
-        ),
+        preprocessing_layers={
+            'observation_market': kr.models.Sequential([
+                kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
+                kr.layers.Flatten()
+            ]),
+            # 'observation_market': kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
+            'observation_holdingRate': kr.layers.Dense(1, activation='tanh')
+        },
         preprocessing_combiner=kr.layers.Concatenate(axis=-1),
-        conv_layer_params=None,
-        fc_layer_params=critic_commonDenseLayerParams,
-        dtype=tf.float32,
+        joint_fc_layer_params=critic_commonDenseLayerParams,
+        joint_activation_fn=tf.nn.relu,
+        output_activation_fn=None,
+        kernel_initializer=None,
+        last_kernel_initializer=None,
         name='Critic Network'
     )
+    print('
     print('Critic Network Created.')
 
     # # create Actor Network
@@ -125,21 +134,12 @@ if __name__ == '__main__':
     actor_net = actor_distribution_network.ActorDistributionNetwork(
         input_tensor_spec=observation_spec,
         output_tensor_spec=action_spec,
-        # preprocessing_layers=(
-        #     kr.models.Sequential([
-        #         kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
-        #         # kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
-        #         kr.layers.Flatten()
-        #     ]),
-        #     kr.layers.Dense(1, activation='sigmoid')
-        # ),
         preprocessing_layers={
             'observation_market': kr.models.Sequential([
-                kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
-                # kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
+                kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
                 kr.layers.Flatten()
             ]),
-            'observation_holdingRate': kr.layers.Dense(1, activation='sigmoid')
+            'observation_holdingRate': kr.layers.Dense(1, activation='tanh')
         },
         preprocessing_combiner=kr.layers.Concatenate(axis=-1),
         fc_layer_params=actor_denseLayerParams,
@@ -163,11 +163,10 @@ if __name__ == '__main__':
         critic_optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=criticLearningRate),
         alpha_optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=alphaLearningRate),
         target_update_tau=target_update_tau,
-        # td_errors_loss_fn=tf.compat.v1.losses.mean_squared_error,
-        td_errors_loss_fn=tf.math.squared_difference,
         gamma=gamma,
         gradient_clipping=gradientClipping,
-        train_step_counter=global_step
+        train_step_counter=global_step,
+        name='SAC Agent'
     )
     tf_agent.initialize()
     print('SAC Agent Created.')
@@ -226,7 +225,7 @@ if __name__ == '__main__':
         env,
         collect_policy,
         observers=[replay_buffer.add_batch],
-        num_episodes=10
+        num_episodes=collect_episodes_per_iteration
     )
     # # (Optional) Optimize by wrapping some of the code in a graph using TF function.
     # tf_agent.train = common.function(tf_agent.train)
@@ -234,25 +233,57 @@ if __name__ == '__main__':
     # Reset the train step
     tf_agent.train_step_counter.assign(0)
     # Evaluate the agent's policy once before training.
-    avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
-    returns = [avg_return]
+    # avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
+    # returns = [avg_return]
     # Main training process
     dataset = replay_buffer.as_dataset(num_parallel_calls=7, sample_batch_size=batchSize, num_steps=2)
     iterator = iter(dataset)
     _timeCost = (dt.datetime.now() - _startTime).total_seconds()
     print('All preparation is done (cost {:.3g} hours). Start training...'.format(_timeCost/3600.0))
+    returns = []
+    steps = []
+    losses = []
+    _startTimeFromStart = dt.datetime.now()
     for _ in range(num_iterations):
+        _startTime = dt.datetime.now()
         # Collect a few steps using collect_policy and save to the replay buffer.
         collect_driver.run()
         # Sample a batch of data from the buffer and update the agent's network.
         experience, unused_info = next(iterator)
         train_loss = tf_agent.train(experience)
         step = tf_agent.train_step_counter.numpy()
+        # show the loss and time cost
+        _timeCost = (dt.datetime.now() - _startTime).total_seconds()
+        _timeCostFromStart = (dt.datetime.now() - _startTimeFromStart).total_seconds()
+        if _timeCost <= 60:
+            print('step = {:>5}: loss = {:+10.6f}  (cost {:>5.2f} [sec]; {:>.2f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost, _timeCostFromStart/3600.0))
+        elif _timeCost <= 3600:
+            print('step = {:>5}: loss = {:+10.6f}  (cost {:>5.2f} [min]; {:>.2f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost/60.0, _timeCostFromStart/3600.0))
+        else:
+            print('step = {:>5}: loss = {:+10.6f}  (cost {:>5.2f} [hrs]; {:>.2f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost/3600.0, _timeCostFromStart/3600.0))
         # if step % log_interval == 0:
-        print('step = {0}: loss = {1}'.format(step, train_loss.loss))
         if step % eval_interval == 0:
             avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
             print('step = {0}: Average Return = {1}'.format(step, avg_return))
             returns.append(avg_return)
-    pl.plot(returns)
+            steps.append(step)
+            losses.append(train_loss)
+    # change format
+    returns = nu.array(returns)
+    steps = nu.array(steps)
+    losses = nu.array(losses)
+    # save results
+    with open('SACAgent_results.pickle', 'wb') as file:
+        pickle.dump(nu.concatenate([steps, returns, losses]), file)
+    # plot
+    pl.xlabel('Step', fontsize=22)
+    pl.ylabel('Returns', fontsize=22)
+    pl.tick_params(labelsize=16)
+    pl.plot(steps, returns)
+    pl.show()
+
+    pl.xlabel('Step', fontsize=22)
+    pl.ylabel('Loss', fontsize=22)
+    pl.tick_params(labelsize=16)
+    pl.plot(steps, losses)
     pl.show()

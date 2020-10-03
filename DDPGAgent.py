@@ -121,9 +121,9 @@ if __name__ == '__main__':
     # actor_convLayerParams = [(96, 3, 1), (24, 3, 1)]
     actor_denseLayerParams = [int(observation_spec['observation_market'].shape[0]//100)]
 
-    num_iterations = 10000
+    num_iterations = 100000
     log_interval = 1000
-    eval_interval = 100
+    eval_interval = 1000
     collect_episodes_per_iteration = 5
     _storeFullEpisodes = 20
     replayBufferCapacity = int(_storeFullEpisodes * episodeEndSteps * batchSize)
@@ -187,7 +187,7 @@ if __name__ == '__main__':
         preprocessing_combiner=kr.layers.Concatenate(axis=-1),
         joint_fc_layer_params=critic_commonDenseLayerParams,
         joint_activation_fn=tf.nn.relu,
-        output_activation_fn=tf.keras.activations.relu,
+        output_activation_fn=None,
         kernel_initializer=None,
         last_kernel_initializer=None,
         name='Critic Network'
