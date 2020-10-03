@@ -4,9 +4,9 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.networks import network
 from tf_agents.networks import utils
 
-
+# https://www.tensorflow.org/agents/api_docs/python/tf_agents/agents/ddpg/critic_network/CriticNetwork
 @gin.configurable
-class CriticNetwork(network.Network):
+class MultiObservationCriticNetwork(network.Network):
   """Creates a critic network."""
 
   def __init__(self,
@@ -16,6 +16,8 @@ class CriticNetwork(network.Network):
                # observation_dropout_layer_params=None,
                # action_fc_layer_params=None,
                # action_dropout_layer_params=None,
+               preprocessing_layers,
+               preprocessing_combiner,
                joint_fc_layer_params=None,
                joint_dropout_layer_params=None,
                joint_activation_fn=tf.nn.relu,
@@ -78,7 +80,7 @@ class CriticNetwork(network.Network):
       ValueError: If `observation_spec` or `action_spec` contains more than one
         observation.
     """
-    super(CriticNetwork, self).__init__(
+    super(MultiObservationCriticNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
         state_spec=(),
         name=name)
@@ -102,20 +104,12 @@ class CriticNetwork(network.Network):
         observation_spec,
         preprocessing_layers=preprocessing_layers,
         preprocessing_combiner=preprocessing_combiner,
-        conv_layer_params=conv_layer_params,
-        fc_layer_params=fc_layer_params,
-        dropout_layer_params=dropout_layer_params,
+        conv_layer_params=None,
+        fc_layer_params=None,
+        dropout_layer_params=None,
         activation_fn=tf.keras.activations.relu,
         kernel_initializer=kernel_initializer,
         batch_squash=False
-    )
-    # set up action_projection layer
-    # initializer = tf.keras.initializers.RandomUniform(minval=-0.003, maxval=0.003)
-    self._action_projection_layer = tf.keras.layers.Dense(
-        flat_action_spec[0].shape.num_elements(),
-        activation=tf.keras.activations.tanh,
-        # kernel_initializer=initializer,
-        name='action_projection_layer'
     )
 
     # TODO(kbanoop): Replace mlp_layers with encoding networks.
@@ -152,7 +146,6 @@ class CriticNetwork(network.Network):
     del step_type  # unused.
 
     observations, network_state = self._encoder(observations, step_type=step_type, network_state=network_state, training=training)
-
 
     # observations = tf.cast(tf.nest.flatten(observations)[0], tf.float32)
     # for layer in self._observation_layers:

@@ -32,6 +32,7 @@ from tf_agents.trajectories import trajectory
 from tf_agents.utils import common, nest_utils
 # Custom Modules
 from BitcoinEnvironment import BTC_JPY_Environment
+from MultiObservationCriticNetwork import MultiObservationCriticNetwork
 
 # Model
 # https://www.tensorflow.org/agents/tutorials/8_networks_tutorial?hl=en
@@ -133,11 +134,12 @@ if __name__ == '__main__':
         observation_spec,
         action_spec,
         preprocessing_layers={
-            'observation_market': kr.models.Sequential([
-                kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
-                # kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
-                kr.layers.Flatten()
-            ]),
+            # 'observation_market': kr.models.Sequential([
+            #     kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
+            #     # kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
+            #     kr.layers.Flatten()
+            # ]),
+            'observation_market': kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
             'observation_holdingRate': kr.layers.Dense(1, activation='tanh')
         },
         preprocessing_combiner=kr.layers.Concatenate(axis=-1),
@@ -150,23 +152,42 @@ if __name__ == '__main__':
     # book p.513-515
     # https://www.tensorflow.org/agents/api_docs/python/tf_agents/networks/q_network/QNetwork
     # https://www.tensorflow.org/agents/api_docs/python/tf_agents/networks/value_network/ValueNetwork
-    critic_net = ValueNetwork(
+    # critic_net = ValueNetwork(
+    #     (observation_spec, action_spec),
+    #     preprocessing_layers=(
+    #         {
+    #             'observation_market': kr.models.Sequential([
+    #                 kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
+    #                 # kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
+    #                 kr.layers.Flatten()
+    #             ]),
+    #             'observation_holdingRate': kr.layers.Dense(1, activation='tanh')
+    #         },
+    #         kr.layers.Dense(1, activation='tanh')
+    #     ),
+    #     preprocessing_combiner=kr.layers.Concatenate(axis=-1),
+    #     conv_layer_params=None,
+    #     fc_layer_params=critic_commonDenseLayerParams,
+    #     dtype=tf.float32,
+    #     name='Critic Network'
+    # )
+    critic_net = MultiObservationCriticNetwork(
         (observation_spec, action_spec),
-        preprocessing_layers=(
-            {
-                'observation_market': kr.models.Sequential([
-                    kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
-                    # kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
-                    kr.layers.Flatten()
-                ]),
-                'observation_holdingRate': kr.layers.Dense(1, activation='tanh')
-            },
-            kr.layers.Dense(1, activation='tanh')
-        ),
+        preprocessing_layers={
+            # 'observation_market': kr.models.Sequential([
+            #     kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
+            #     # kr.layers.Conv2D(filters=int((observation_spec[0].shape[0]*observation_spec[0].shape[1])//8), kernel_size=3, activation='relu', input_shape=(observation_spec[0].shape[0], observation_spec[0].shape[1], 1)),
+            #     kr.layers.Flatten()
+            # ]),
+            'observation_market': kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
+            'observation_holdingRate': kr.layers.Dense(1, activation='tanh')
+        },
         preprocessing_combiner=kr.layers.Concatenate(axis=-1),
-        conv_layer_params=None,
-        fc_layer_params=critic_commonDenseLayerParams,
-        dtype=tf.float32,
+        joint_fc_layer_params=critic_commonDenseLayerParams,
+        joint_activation_fn=tf.nn.relu,
+        output_activation_fn=tf.keras.activations.relu,
+        kernel_initializer=None,
+        last_kernel_initializer=None,
         name='Critic Network'
     )
     print('Critic Network Created.')
