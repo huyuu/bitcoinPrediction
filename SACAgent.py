@@ -165,7 +165,6 @@ if __name__ == '__main__':
         gamma=gamma,
         gradient_clipping=gradientClipping,
         train_step_counter=global_step,
-        name='SAC Agent'
     )
     tf_agent.initialize()
     print('SAC Agent Created.')
