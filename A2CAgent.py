@@ -134,7 +134,7 @@ if __name__ == '__main__':
         normalize_returns=True,
         debug_summaries=True,
         summarize_grads_and_vars=True,
-        entropy_regularization=0.2,
+        entropy_regularization=None,
         train_step_counter=global_step,
         name='ReinforceAgent'
     )
