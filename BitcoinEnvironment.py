@@ -89,10 +89,17 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         self.holdingBTC = 0
         self.holdingJPY = self.initialAsset
         self.holdingRate = 0.0
-        self.currentDate = nu.random.choice(self.possibleStartDate)
         self.currentPrice = 0.0
-        # get next market snapshot
+        # get available current date
         _graphDir = './LabeledData/graphData'
+        while True:
+            self.currentDate = nu.random.choice(self.possibleStartDate)
+            _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
+            if os.path.exists(_graphPath):
+                break
+            else:
+                continue
+        # get next market snapshot
         if self.isHugeMemorryMode:
             _graphPath = self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
             marketSnapshot = self.graphData[f'{_graphPath}']

@@ -139,7 +139,6 @@ class MultiObservationCriticNetwork(network.Network):
 
   def call(self, inputs, step_type=(), network_state=(), training=False):
     observations, actions = inputs
-    del step_type  # unused.
 
     observations, network_state = self._encoder(observations, step_type=step_type, network_state=network_state, training=training)
 
