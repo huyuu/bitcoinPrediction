@@ -116,7 +116,6 @@ if __name__ == '__main__':
         last_kernel_initializer=None,
         name='Critic Network'
     )
-    print('
     print('Critic Network Created.')
 
     # # create Actor Network
