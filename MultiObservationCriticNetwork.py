@@ -11,14 +11,14 @@ class CriticNetwork(network.Network):
 
   def __init__(self,
                input_tensor_spec,
-               observation_conv_layer_params=None,
-               observation_fc_layer_params=None,
-               observation_dropout_layer_params=None,
-               action_fc_layer_params=None,
-               action_dropout_layer_params=None,
+               # observation_conv_layer_params=None,
+               # observation_fc_layer_params=None,
+               # observation_dropout_layer_params=None,
+               # action_fc_layer_params=None,
+               # action_dropout_layer_params=None,
                joint_fc_layer_params=None,
                joint_dropout_layer_params=None,
-               activation_fn=tf.nn.relu,
+               joint_activation_fn=tf.nn.relu,
                output_activation_fn=None,
                kernel_initializer=None,
                last_kernel_initializer=None,
@@ -86,65 +86,84 @@ class CriticNetwork(network.Network):
     observation_spec, action_spec = input_tensor_spec
 
     if len(tf.nest.flatten(observation_spec)) > 1:
-      raise ValueError('Only a single observation is supported by this network')
+        raise ValueError('Only a single observation is supported by this network')
 
     flat_action_spec = tf.nest.flatten(action_spec)
     if len(flat_action_spec) > 1:
-      raise ValueError('Only a single action is supported by this network')
+        raise ValueError('Only a single action is supported by this network')
     self._single_action_spec = flat_action_spec[0]
-
+    # set up kernel_initializer
     if kernel_initializer is None:
-      kernel_initializer = tf.compat.v1.keras.initializers.VarianceScaling(
-          scale=1. / 3., mode='fan_in', distribution='uniform')
+        kernel_initializer = tf.compat.v1.keras.initializers.VarianceScaling(scale=1. / 3., mode='fan_in', distribution='uniform')
     if last_kernel_initializer is None:
-      last_kernel_initializer = tf.keras.initializers.RandomUniform(
-          minval=-0.003, maxval=0.003)
+        last_kernel_initializer = tf.keras.initializers.RandomUniform(minval=-0.003, maxval=0.003)
+    # set up encoder_network
+    self._encoder = encoding_network.EncodingNetwork(
+        observation_spec,
+        preprocessing_layers=preprocessing_layers,
+        preprocessing_combiner=preprocessing_combiner,
+        conv_layer_params=conv_layer_params,
+        fc_layer_params=fc_layer_params,
+        dropout_layer_params=dropout_layer_params,
+        activation_fn=tf.keras.activations.relu,
+        kernel_initializer=kernel_initializer,
+        batch_squash=False
+    )
+    # set up action_projection layer
+    # initializer = tf.keras.initializers.RandomUniform(minval=-0.003, maxval=0.003)
+    self._action_projection_layer = tf.keras.layers.Dense(
+        flat_action_spec[0].shape.num_elements(),
+        activation=tf.keras.activations.tanh,
+        # kernel_initializer=initializer,
+        name='action_projection_layer'
+    )
 
     # TODO(kbanoop): Replace mlp_layers with encoding networks.
-    self._observation_layers = utils.mlp_layers(
-        observation_conv_layer_params,
-        observation_fc_layer_params,
-        observation_dropout_layer_params,
-        activation_fn=activation_fn,
-        kernel_initializer=kernel_initializer,
-        name='observation_encoding')
+    # self._observation_layers = utils.mlp_layers(
+    #     observation_conv_layer_params,
+    #     observation_fc_layer_params,
+    #     observation_dropout_layer_params,
+    #     activation_fn=activation_fn,
+    #     kernel_initializer=kernel_initializer,
+    #     name='observation_encoding')
 
-    self._action_layers = utils.mlp_layers(
-        None,
-        action_fc_layer_params,
-        action_dropout_layer_params,
-        activation_fn=activation_fn,
-        kernel_initializer=kernel_initializer,
-        name='action_encoding')
+    # self._action_layers = utils.mlp_layers(
+    #     None,
+    #     action_fc_layer_params,
+    #     action_dropout_layer_params,
+    #     activation_fn=activation_fn,
+    #     kernel_initializer=kernel_initializer,
+    #     name='action_encoding')
 
     self._joint_layers = utils.mlp_layers(
         None,
         joint_fc_layer_params,
         joint_dropout_layer_params,
-        activation_fn=activation_fn,
+        activation_fn=joint_activation_fn,
         kernel_initializer=kernel_initializer,
         name='joint_mlp')
 
     self._joint_layers.append(
-        tf.keras.layers.Dense(
-            1,
-            activation=output_activation_fn,
-            kernel_initializer=last_kernel_initializer,
-            name='value'))
+        tf.keras.layers.Dense(1, activation=output_activation_fn, kernel_initializer=last_kernel_initializer, name='value')
+    )
 
   def call(self, inputs, step_type=(), network_state=(), training=False):
     observations, actions = inputs
     del step_type  # unused.
-    observations = tf.cast(tf.nest.flatten(observations)[0], tf.float32)
-    for layer in self._observation_layers:
-      observations = layer(observations, training=training)
 
-    actions = tf.cast(tf.nest.flatten(actions)[0], tf.float32)
-    for layer in self._action_layers:
-      actions = layer(actions, training=training)
+    observations, network_state = self._encoder(observations, step_type=step_type, network_state=network_state, training=training)
+
+
+    # observations = tf.cast(tf.nest.flatten(observations)[0], tf.float32)
+    # for layer in self._observation_layers:
+    #     observations = layer(observations, training=training)
+
+    # actions = tf.cast(tf.nest.flatten(actions)[0], tf.float32)
+    # for layer in self._action_layers:
+    #   actions = layer(actions, training=training)
 
     joint = tf.concat([observations, actions], 1)
     for layer in self._joint_layers:
-      joint = layer(joint, training=training)
+        joint = layer(joint, training=training)
 
     return tf.reshape(joint, [-1]), network_state

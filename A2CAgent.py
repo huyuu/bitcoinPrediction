@@ -55,6 +55,7 @@ if __name__ == '__main__':
     replayBufferCapacity = int(_storeFullEpisodes * episodeEndSteps * batchSize)
     validateEpisodes = 2
 
+    observationConvParams = [(int(observation_spec['observation_market'].shape[0]//100), 3, 1)]
     critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//100)]
     actor_denseLayerParams = [int(observation_spec['observation_market'].shape[0]//100)]
 
@@ -91,10 +92,14 @@ if __name__ == '__main__':
             #     kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
             #     kr.layers.Flatten()
             # ]),
-            'observation_market': [
-                kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
-                kr.layers.Flatten()
-            ],
+            'observation_market': utils.mlp_layers(
+                conv_layer_params=observationConvParams,
+                fc_layer_params=None,
+                dropout_layer_params=None,
+                activation_fn=tf.keras.activations.relu,
+                kernel_initializer=None,
+                name='observation_encoding'
+            ),
             'observation_holdingRate': kr.layers.Dense(1, activation='tanh')
         },
         preprocessing_combiner=kr.layers.Concatenate(axis=-1),
@@ -113,10 +118,14 @@ if __name__ == '__main__':
             #     kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
             #     kr.layers.Flatten()
             # ]),
-            'observation_market': [
-                kr.layers.Conv2D(filters=int((observation_spec['observation_market'].shape[0]*observation_spec['observation_market'].shape[1])//100), kernel_size=3, activation='relu', input_shape=(observation_spec['observation_market'].shape[0], observation_spec['observation_market'].shape[1], 1)),
-                kr.layers.Flatten()
-            ],
+            'observation_market': utils.mlp_layers(
+                conv_layer_params=observationConvParams,
+                fc_layer_params=None,
+                dropout_layer_params=None,
+                activation_fn=tf.keras.activations.relu,
+                kernel_initializer=None,
+                name='observation_encoding'
+            ),
             'observation_holdingRate': kr.layers.Dense(1, activation='sigmoid')
         },
         preprocessing_combiner=kr.layers.Concatenate(axis=-1),
