@@ -50,7 +50,7 @@ if __name__ == '__main__':
 
     # Hyperparameters
     batchSize = 1
-    num_iterations = 10000
+    num_iterations = int(1e5)
     collect_episodes_per_iteration = 10
     _storeFullEpisodes = collect_episodes_per_iteration
     replayBufferCapacity = int(_storeFullEpisodes * episodeEndSteps * batchSize)
@@ -62,7 +62,7 @@ if __name__ == '__main__':
     learning_rate = 1e-6 # @param {type:"number"}
     entropy_coeff = 0.1
     log_interval = 25 # @param {type:"integer"}
-    eval_interval = 100 # @param {type:"integer"}
+    eval_interval = 1000 # @param {type:"integer"}
     validateEpisodes = 3
 
 

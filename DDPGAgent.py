@@ -203,6 +203,8 @@ if __name__ == '__main__':
         critic_network=critic_net,
         actor_optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=actorLearningRate),
         critic_optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=criticLearningRate),
+        target_update_tau=1.0,
+        target_update_period=1,
         dqda_clipping=None,
         td_errors_loss_fn=None,
         gamma=gamma,
