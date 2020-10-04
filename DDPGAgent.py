@@ -310,7 +310,7 @@ if __name__ == '__main__':
             print('step = {0}: Average Return = {1}'.format(step, avg_return))
             returns.append(avg_return)
             steps.append(step)
-            losses.append(train_loss)
+            losses.append(train_loss.loss)
     # change format
     returns = nu.array(returns)
     steps = nu.array(steps)
