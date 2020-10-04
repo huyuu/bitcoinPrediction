@@ -56,9 +56,9 @@ if __name__ == '__main__':
     log_interval = 2
     eval_interval = 1000
 
-    criticLearningRate = 1e-6
-    actorLearningRate = 1e-6
-    alphaLearningRate = 1e-6
+    criticLearningRate = 1e-4
+    actorLearningRate = 1e-4
+    alphaLearningRate = 1e-4
 
     gradientClipping = None
     target_update_tau = 1e-4
@@ -69,7 +69,7 @@ if __name__ == '__main__':
     actor_denseLayerParams = [int(observation_spec['observation_market'].shape[0]//100)]
 
     collect_episodes_per_iteration = 5
-    _storeFullEpisodes = 20
+    _storeFullEpisodes = 40
     replayBufferCapacity = int(_storeFullEpisodes * episodeEndSteps * batchSize)
     warmupEpisodes = _storeFullEpisodes
     validateEpisodes = 3
