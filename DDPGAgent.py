@@ -8,6 +8,7 @@ import pandas as pd
 import datetime as dt
 import multiprocessing as mp
 from matplotlib import pyplot as pl
+import pickle
 # Tensorflow Modules
 import tensorflow as tf
 tf.compat.v1.enable_v2_behavior()
