@@ -313,12 +313,12 @@ if __name__ == '__main__':
             steps.append(step)
             losses.append(train_loss.loss)
     # change format
-    returns = nu.array(returns)
-    steps = nu.array(steps)
-    losses = nu.array(losses)
+    returns = nu.array(returns).reshape(-1, 1)
+    steps = nu.array(steps).reshape(-1, 1)
+    losses = nu.array(losses).reshape(-1, 1)
     # save results
     with open('DDPGAgent_results.pickle', 'wb') as file:
-        pickle.dump(nu.concatenate([steps, returns, losses]), file)
+        pickle.dump(nu.concatenate([steps, returns, losses], axis=-1), file)
     # plot
     pl.plot(returns)
     pl.show()
