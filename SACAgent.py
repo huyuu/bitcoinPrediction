@@ -9,6 +9,8 @@ import datetime as dt
 import multiprocessing as mp
 from matplotlib import pyplot as pl
 import pickle
+import sys
+import os
 # Tensorflow Modules
 import tensorflow as tf
 tf.compat.v1.enable_v2_behavior()
@@ -22,17 +24,40 @@ from tf_agents.experimental.train.utils import spec_utils, strategy_utils, train
 from tf_agents.eval import metric_utils
 from tf_agents.metrics import tf_metrics
 from tf_agents.networks import actor_distribution_network, normal_projection_network, value_network, q_network
-from tf_agents.policies import greedy_policy, random_tf_policy
+from tf_agents.policies import greedy_policy, random_tf_policy, policy_saver
 from tf_agents.replay_buffers import tf_uniform_replay_buffer, reverb_replay_buffer, reverb_utils
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
+import shutil
 # Custom Modules
 from BitcoinEnvironment import BTC_JPY_Environment
 from MultiObservationCriticNetwork import MultiObservationCriticNetwork
 
 
+def create_zip_file(dirname, base_filename):
+  return shutil.make_archive(base_filename, 'zip', dirname)
+
+def upload_and_unzip_file_to(dirname):
+  if files is None:
+    return
+  uploaded = files.upload()
+  for fn in uploaded.keys():
+    print('User uploaded file "{name}" with length {length} bytes'.format(
+        name=fn, length=len(uploaded[fn])))
+    shutil.rmtree(dirname)
+    zip_files = zipfile.ZipFile(io.BytesIO(uploaded[fn]), 'r')
+    zip_files.extractall(dirname)
+    zip_files.close()
+
+
 if __name__ == '__main__':
     mp.freeze_support()
+    # check if should continue from last stored checkpoint
+    if len(sys.argv) == 2:
+        shouldContinueFromLastCheckpoint = sys.argv[1] == '-c'
+    else:
+        shouldContinueFromLastCheckpoint = False
+
     # Environment
 
     # create environment and transfer it to Tensorflow version
@@ -53,28 +78,35 @@ if __name__ == '__main__':
     # Hyperparameters
 
     batchSize = 1
-    num_iterations = int(1e5)
-    log_interval = 2
-    eval_interval = 1000
+    num_iterations = int(1e6)
+    log_interval = num_iterations//1000
+    eval_interval = num_iterations//100
 
-    criticLearningRate = 1e-4
-    actorLearningRate = 1e-4
-    alphaLearningRate = 1e-4
+    criticLearningRate = 1e-6
+    actorLearningRate = 1e-6
+    alphaLearningRate = 1e-6
 
     gradientClipping = None
-    target_update_tau = 1e-4
+    target_update_tau = 1e-6
 
     # (num_units, kernel_size, stride)
     # critic_observationConvLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
     critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//100)]
     actor_denseLayerParams = [int(observation_spec['observation_market'].shape[0]//100)]
 
-    collect_episodes_per_iteration = 5
-    _storeFullEpisodes = 40
+    collect_episodes_per_iteration = 10
+    _storeFullEpisodes = 200
     replayBufferCapacity = int(_storeFullEpisodes * episodeEndSteps * batchSize)
     warmupEpisodes = _storeFullEpisodes
-    validateEpisodes = 3
+    validateEpisodes = 10
 
+    checkpointDir = './SACAgent_checkcpoints'
+    if not os.path.exists(checkpointDir):
+        os.mkdir(checkpointDir)
+
+    policyDir = './SACAgent_savedPolicy'
+    if not os.path.exists(policyDir):
+        os.mkdir(policyDir)
 
     # Models
 
@@ -152,6 +184,8 @@ if __name__ == '__main__':
     # create SAC Agent
     # https://www.tensorflow.org/agents/api_docs/python/tf_agents/agents/SacAgent
     global_step = tf.compat.v1.train.get_or_create_global_step()
+    if shouldContinueFromLastCheckpoint:
+        global_step = tf.compat.v1.train.get_global_step()
     # with strategy.scope():
     #     train_step = train_utils.create_train_step()
     tf_agent = sac_agent.SacAgent(
@@ -169,6 +203,7 @@ if __name__ == '__main__':
     )
     tf_agent.initialize()
     print('SAC Agent Created.')
+
 
     # policies
     evaluate_policy = greedy_policy.GreedyPolicy(tf_agent.policy)
@@ -200,8 +235,6 @@ if __name__ == '__main__':
     print('Replay Buffer Created, start warming-up ...')
     _startTime = dt.datetime.now()
 
-    # create Reverb
-
 
     # driver for warm-up
     # https://www.tensorflow.org/agents/api_docs/python/tf_agents/drivers/dynamic_episode_driver/DynamicEpisodeDriver
@@ -211,7 +244,19 @@ if __name__ == '__main__':
         observers=[replay_buffer.add_batch],
         num_episodes=warmupEpisodes
     )
-    initial_collect_driver.run()
+    # run restore process
+    if shouldContinueFromLastCheckpoint:
+        train_checkpointer = common.Checkpointer(
+            ckpt_dir=checkpointDir,
+            max_to_keep=1,
+            agent=tf_agent,
+            policy=tf_agent.policy,
+            replay_buffer=replay_buffer,
+            global_step=global_step
+        )
+        train_checkpointer.initialize_or_restore()
+    else:
+        initial_collect_driver.run()
     _timeCost = (dt.datetime.now() - _startTime).total_seconds()
     print('Replay Buffer Warm-up Done. (cost {:.3g} hours)'.format(_timeCost/3600.0))
     _startTime = dt.datetime.now()
@@ -239,9 +284,9 @@ if __name__ == '__main__':
     iterator = iter(dataset)
     _timeCost = (dt.datetime.now() - _startTime).total_seconds()
     print('All preparation is done (cost {:.3g} hours). Start training...'.format(_timeCost/3600.0))
-    returns = []
-    steps = []
-    losses = []
+    returns = nu.array([])
+    steps = nu.array([])
+    losses = nu.array([])
     _startTimeFromStart = dt.datetime.now()
     for _ in range(num_iterations):
         _startTime = dt.datetime.now()
@@ -252,28 +297,59 @@ if __name__ == '__main__':
         train_loss = tf_agent.train(experience)
         step = tf_agent.train_step_counter.numpy()
         # show the loss and time cost
-        _timeCost = (dt.datetime.now() - _startTime).total_seconds()
-        _timeCostFromStart = (dt.datetime.now() - _startTimeFromStart).total_seconds()
-        if _timeCost <= 60:
-            print('step = {:>5}: loss = {:+10.6f}  (cost {:>5.2f} [sec]; {:>.2f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost, _timeCostFromStart/3600.0))
-        elif _timeCost <= 3600:
-            print('step = {:>5}: loss = {:+10.6f}  (cost {:>5.2f} [min]; {:>.2f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost/60.0, _timeCostFromStart/3600.0))
-        else:
-            print('step = {:>5}: loss = {:+10.6f}  (cost {:>5.2f} [hrs]; {:>.2f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost/3600.0, _timeCostFromStart/3600.0))
-        # if step % log_interval == 0:
+        if step % log_interval == 0:
+            _timeCost = (dt.datetime.now() - _startTime).total_seconds()
+            _timeCostFromStart = (dt.datetime.now() - _startTimeFromStart).total_seconds()
+            if _timeCost <= 60:
+                print('step = {:>5}: loss = {:+10.6f}  (cost {:>5.2f} [sec]; {:>.2f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost, _timeCostFromStart/3600.0))
+            elif _timeCost <= 3600:
+                print('step = {:>5}: loss = {:+10.6f}  (cost {:>5.2f} [min]; {:>.2f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost/60.0, _timeCostFromStart/3600.0))
+            else:
+                print('step = {:>5}: loss = {:+10.6f}  (cost {:>5.2f} [hrs]; {:>.2f} [hrs] from start.)'.format(step, train_loss.loss, _timeCost/3600.0, _timeCostFromStart/3600.0))
         if step % eval_interval == 0:
             avg_return = compute_avg_return(evaluate_env, evaluate_policy, validateEpisodes)
             print('step = {0}: Average Return = {1}'.format(step, avg_return))
-            returns.append(avg_return)
-            steps.append(step)
-            losses.append(train_loss.loss)
-    # change format
-    returns = nu.array(returns).reshape(-1, 1)
-    steps = nu.array(steps).reshape(-1, 1)
-    losses = nu.array(losses).reshape(-1, 1)
+            steps = nu.append(steps, step)
+            returns = nu.append(returns, avg_return)
+            losses = nu.append(losses, train_loss.loss)
+            # save temp results
+            with open('SACAgent_tempResults.pickle', 'wb') as file:
+                pickle.dump(nu.concatenate([steps.reshape(-1, 1), returns.reshape(-1, 1), losses.reshape(-1, 1)], axis=-1), file)
+            # save models
+            # a checkpoint of a agent model can be used to restart a training
+            # https://www.tensorflow.org/agents/tutorials/10_checkpointer_policysaver_tutorial?hl=en
+            train_checkpointer = common.Checkpointer(
+                ckpt_dir=checkpointDir,
+                max_to_keep=1,
+                agent=tf_agent,
+                policy=tf_agent.policy,
+                replay_buffer=replay_buffer,
+                global_step=global_step
+            )
+            train_checkpointer.save(global_step)
+            # save policy
+            # saved policies can only be used to evaluate, not to train.
+            tf_policy_saver = policy_saver.PolicySaver(tf_agent.policy)
+            tf_policy_saver.save(policy_dir)
     # save results
     with open('SACAgent_results.pickle', 'wb') as file:
-        pickle.dump(nu.concatenate([steps, returns, losses], axis=-1), file)
+        pickle.dump(nu.concatenate([steps.reshape(-1, 1), returns.reshape(-1, 1), losses.reshape(-1, 1)], axis=-1), file)
+    # save models
+    # a checkpoint of a agent model can be used to restart a training
+    # https://www.tensorflow.org/agents/tutorials/10_checkpointer_policysaver_tutorial?hl=en
+    train_checkpointer = common.Checkpointer(
+        ckpt_dir=checkpointDir,
+        max_to_keep=1,
+        agent=tf_agent,
+        policy=tf_agent.policy,
+        replay_buffer=replay_buffer,
+        global_step=global_step
+    )
+    train_checkpointer.save(global_step)
+    # save policy
+    # saved policies can only be used to evaluate, not to train.
+    tf_policy_saver = policy_saver.PolicySaver(tf_agent.policy)
+    tf_policy_saver.save(policy_dir)
     # plot
     pl.xlabel('Step', fontsize=22)
     pl.ylabel('Returns', fontsize=22)
