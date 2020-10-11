@@ -327,10 +327,10 @@ if __name__ == '__main__':
                 global_step=global_step
             )
             train_checkpointer.save(global_step)
-            # save policy
-            # saved policies can only be used to evaluate, not to train.
-            tf_policy_saver = policy_saver.PolicySaver(evaluate_policy)
-            tf_policy_saver.save(policy_dir)
+            # # save policy
+            # # saved policies can only be used to evaluate, not to train.
+            # tf_policy_saver = policy_saver.PolicySaver(evaluate_policy)
+            # tf_policy_saver.save(policy_dir)
     # save results
     with open('SACAgent_results.pickle', 'wb') as file:
         pickle.dump(nu.concatenate([steps.reshape(-1, 1), returns.reshape(-1, 1), losses.reshape(-1, 1)], axis=-1), file)
@@ -346,10 +346,10 @@ if __name__ == '__main__':
         global_step=global_step
     )
     train_checkpointer.save(global_step)
-    # save policy
-    # saved policies can only be used to evaluate, not to train.
-    tf_policy_saver = policy_saver.PolicySaver(evaluate_policy)
-    tf_policy_saver.save(policy_dir)
+    # # save policy
+    # # saved policies can only be used to evaluate, not to train.
+    # tf_policy_saver = policy_saver.PolicySaver(evaluate_policy)
+    # tf_policy_saver.save(policy_dir)
     # plot
     pl.xlabel('Step', fontsize=22)
     pl.ylabel('Returns', fontsize=22)
