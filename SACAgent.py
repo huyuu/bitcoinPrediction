@@ -329,7 +329,7 @@ if __name__ == '__main__':
             train_checkpointer.save(global_step)
             # save policy
             # saved policies can only be used to evaluate, not to train.
-            tf_policy_saver = policy_saver.PolicySaver(tf_agent.policy)
+            tf_policy_saver = policy_saver.PolicySaver(evaluate_policy)
             tf_policy_saver.save(policy_dir)
     # save results
     with open('SACAgent_results.pickle', 'wb') as file:
@@ -348,7 +348,7 @@ if __name__ == '__main__':
     train_checkpointer.save(global_step)
     # save policy
     # saved policies can only be used to evaluate, not to train.
-    tf_policy_saver = policy_saver.PolicySaver(tf_agent.policy)
+    tf_policy_saver = policy_saver.PolicySaver(evaluate_policy)
     tf_policy_saver.save(policy_dir)
     # plot
     pl.xlabel('Step', fontsize=22)
