@@ -247,18 +247,18 @@ if __name__ == '__main__':
             # save temp results
             with open('A2CAgent_tempResults.pickle', 'wb') as file:
                 pickle.dump(nu.concatenate([steps.reshape(-1, 1), returns.reshape(-1, 1), losses.reshape(-1, 1)], axis=-1), file)
-            # save models
-            # a checkpoint of a agent model can be used to restart a training
-            # https://www.tensorflow.org/agents/tutorials/10_checkpointer_policysaver_tutorial?hl=en
-            train_checkpointer = common.Checkpointer(
-                ckpt_dir=checkpointDir,
-                max_to_keep=1,
-                agent=tf_agent,
-                policy=tf_agent.policy,
-                replay_buffer=replay_buffer,
-                global_step=global_step
-            )
-            train_checkpointer.save(global_step)
+            # # save models
+            # # a checkpoint of a agent model can be used to restart a training
+            # # https://www.tensorflow.org/agents/tutorials/10_checkpointer_policysaver_tutorial?hl=en
+            # train_checkpointer = common.Checkpointer(
+            #     ckpt_dir=checkpointDir,
+            #     max_to_keep=1,
+            #     agent=tf_agent,
+            #     policy=tf_agent.policy,
+            #     replay_buffer=replay_buffer,
+            #     global_step=global_step
+            # )
+            # train_checkpointer.save(global_step)
             # # save policy
             # # saved policies can only be used to evaluate, not to train.
             # tf_policy_saver = policy_saver.PolicySaver(tf_agent.policy)
