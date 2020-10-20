@@ -78,7 +78,7 @@ if __name__ == '__main__':
     # Hyperparameters
 
     batchSize = 1
-    num_iterations = int(5e5)
+    num_iterations = int(3e5)
     log_interval = num_iterations//1000
     eval_interval = num_iterations//100
 

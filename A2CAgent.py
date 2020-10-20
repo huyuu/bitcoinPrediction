@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
     # Hyperparameters
     batchSize = 1
-    num_iterations = int(1e6)
+    num_iterations = int(3e5)
     collect_episodes_per_iteration = 10
     _storeFullEpisodes = collect_episodes_per_iteration
     replayBufferCapacity = int(_storeFullEpisodes * episodeEndSteps * batchSize)
