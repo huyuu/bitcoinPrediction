@@ -63,10 +63,10 @@ if __name__ == '__main__':
     # create environment and transfer it to Tensorflow version
     gamma = 0.999
     print('Creating environment ...')
-    env = BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=True, shouldGiveRewardsFinally=True, gamma=gamma)
+    env = BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=True, shouldGiveRewardsFinally=False, gamma=gamma)
     episodeEndSteps = env.episodeEndSteps
     env = tf_py_environment.TFPyEnvironment(env)
-    evaluate_env = tf_py_environment.TFPyEnvironment(BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=False, shouldGiveRewardsFinally=True, gamma=gamma))
+    evaluate_env = tf_py_environment.TFPyEnvironment(BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=False, shouldGiveRewardsFinally=False, gamma=gamma))
     observation_spec = env.observation_spec()
     action_spec = env.action_spec()
     print('Environment created.')
@@ -78,7 +78,7 @@ if __name__ == '__main__':
     # Hyperparameters
 
     batchSize = 1
-    num_iterations = int(1e5)
+    num_iterations = int(3e4)
     log_interval = num_iterations//1000
     eval_interval = num_iterations//100
 
@@ -343,15 +343,6 @@ if __name__ == '__main__':
     # save models
     # a checkpoint of a agent model can be used to restart a training
     # https://www.tensorflow.org/agents/tutorials/10_checkpointer_policysaver_tutorial?hl=en
-    train_checkpointer = common.Checkpointer(
-        ckpt_dir=checkpointDir,
-        max_to_keep=1,
-        agent=tf_agent,
-        policy=tf_agent.policy,
-        replay_buffer=replay_buffer,
-        global_step=global_step
-    )
-    train_checkpointer.save(global_step)
     # # save policy
     # # saved policies can only be used to evaluate, not to train.
     # tf_policy_saver = policy_saver.PolicySaver(evaluate_policy)
@@ -368,3 +359,13 @@ if __name__ == '__main__':
     pl.tick_params(labelsize=16)
     pl.plot(steps, losses)
     pl.show()
+    # save
+    train_checkpointer = common.Checkpointer(
+        ckpt_dir=checkpointDir,
+        max_to_keep=1,
+        agent=tf_agent,
+        policy=tf_agent.policy,
+        replay_buffer=replay_buffer,
+        global_step=global_step
+    )
+    train_checkpointer.save(global_step)
