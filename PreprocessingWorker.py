@@ -117,7 +117,7 @@ class PreprocessingWorker():
             os.mkdir(graphDataDir)
         # switch for span
         if span == '15MIN':
-            if startDate != None:
+            if startDate != None and os.path.exists(storedFilePath):
                 fileNames = filter(lambda name: '.csv' in name and os.stat(f'{dirName}/{name}').st_size > 10, os.listdir(dirName))
                 fileNames = [ (name, dt.datetime.strptime(name.split('.csv')[0], '%Y_%m_%d_%H_%M')) for name in fileNames ]
                 fileNames = filter(lambda pair: pair[1] >= startDate, fileNames)
@@ -138,7 +138,7 @@ class PreprocessingWorker():
                         for i, row in enumerate(newIndices):
                             data.loc[row] = newData.loc[i]
                         ts = nu.concatenate([ts, newIndices])
-                    else:
+                    else: # add to the last line
                         newIndices = range(data.index.values.shape[0], data.index.values.shape[0] + newData.index.values.shape[0])
                         for i, row in enumerate(newIndices):
                             data.loc[row] = newData.loc[i]
@@ -149,7 +149,7 @@ class PreprocessingWorker():
                 del data['DateTypeDate']
                 data.to_csv(storedFilePath, index=False, header=True)
 
-            else:
+            else: # don't have startDate
                 fileNames = filter(lambda name: '.csv' in name and os.stat(f'{dirName}/{name}').st_size > 10, os.listdir(dirName))
                 fileNames = [ (name, dt.datetime.strptime(name.split('.csv')[0], '%Y_%m_%d_%H_%M')) for name in fileNames ]
                 fileNames = sorted(fileNames, key=lambda pair: pair[1])
@@ -194,6 +194,107 @@ class PreprocessingWorker():
                 #         graphData = pd.DataFrame(graphArray, index=data.loc[targetIndices[:-1], 'Date'])
                 #         graphName = data.loc[t, 'Date'].split('.')[0].replace('T', '_').replace(':', '-')
                 #         graphData.to_csv(f'{graphDataDir}/{graphName}.csv', index=True, header=True)
+                data.to_csv(storedFilePath, index=False, header=True)
+
+
+        elif span == '1HOUR':
+            if startDate != None and os.path.exists(storedFilePath):
+                fileNames = filter(lambda name: '.csv' in name and os.stat(f'{dirName}/{name}').st_size > 10, os.listdir(dirName))
+                fileNames = [ (name, dt.datetime.strptime(name.split('.csv')[0], '%Y_%m_%d_%H_%M')) for name in fileNames ]
+                fileNames = filter(lambda pair: pair[1] >= startDate, fileNames)
+                fileNames = sorted(fileNames, key=lambda pair: pair[1])
+                # fetch old data
+                data = pd.read_csv(storedFilePath)
+                data['DateTypeDate'] = stringToDate(data['Date'].values.ravel())
+                # fetch new data
+                ts = nu.array([], dtype=nu.int)
+                for name, date in fileNames:
+                    new15minData = pd.read_csv(f'{dirName}/{name}')
+                    # drop last row
+                    new15minData = newData.drop(newData.index[[-1]])
+                    new15minData['DateTypeDate'] = stringToDate(new15minData['Date'].values.ravel())
+                    # dump 15minData into 1HourData
+                    hourRoundedDate = dt.datetime(date.year, date.month, date.day, date.hour, 0, 0)
+                    # init newHourData
+                    newHourData = new15minData.copy()
+                    newHourData.drop(newHourData.index[:])
+                    for row in new15minData.index:
+                        # if the row is within 1hour since last, dump it into the row
+                        if new15minData.loc[row, 'DateTypeDate'].hour == hourRoundedDate.hour:
+                            newHourData.loc[row, 'High'] = max(newHourData.loc[row, 'High'], new15minData.loc[row, 'High'])
+                            newHourData.loc[row, 'Low'] = min(newHourData.loc[row, 'Low'], new15minData.loc[row, 'Low'])
+                            # only for the last one. For convenience, we propose it for all
+                            newHourData.loc[row, 'Close'] = new15minData.loc[row, 'Close']
+                            newHourData.loc[row, 'time_close'] = new15minData.loc[row, 'time_close']
+                        # should create new row for the next hour
+                        else:
+                            hourRoundedDate += dt.timedelta(hours=1)
+                            newHourData.loc[row] = new15minData.loc[row]
+                            newHourData.loc['time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
+                    # get the specific row of the old data to insert into
+                    rowIndex = data.loc[data['Date'] == dateToString(date)].index.values
+                    if rowIndex.shape[0] != 0:
+                        newIndices = range(rowIndex[0], rowIndex[0] + newHourData.index.values.shape[0])
+                        for i, row in enumerate(newIndices):
+                            data.loc[row] = newHourData.loc[i]
+                        ts = nu.concatenate([ts, newIndices])
+                    else: # add to the last line
+                        newIndices = range(data.index.values.shape[0], data.index.values.shape[0] + newHourData.index.values.shape[0])
+                        for i, row in enumerate(newIndices):
+                            data.loc[row] = newHourData.loc[i]
+                        ts = nu.concatenate([ts, newIndices])
+                        data = data.sort_values('DateTypeDate').reset_index(drop=True)
+                # calculate graphData and label
+                data = generateGraphDataAndLabel(data=data, ts=ts, resolution=resolution, timeSpreadPast=int(timeSpreadPast), timeSpreadFuture=int(timeSpreadFuture), graphDataDir=graphDataDir)
+                del data['DateTypeDate']
+                data.to_csv(storedFilePath, index=False, header=True)
+
+            else: # don't have start Date
+                fileNames = filter(lambda name: '.csv' in name and os.stat(f'{dirName}/{name}').st_size > 10, os.listdir(dirName))
+                fileNames = [ (name, dt.datetime.strptime(name.split('.csv')[0], '%Y_%m_%d_%H_%M')) for name in fileNames ]
+                fileNames = sorted(fileNames, key=lambda pair: pair[1])
+                # # fetch the first data
+                # name, date = fileNames[0]
+                # data = pd.read_csv(f'{dirName}/{name}')
+                # for name, date in fileNames[1:]:
+                #     _newData = pd.read_csv(f'{dirName}/{name}')
+                #     _newData = _newData.drop(_newData.index[[-1]])
+                #     data = pd.concat([data, _newData])
+                data = None
+                # fetch new data
+                for name, date in fileNames:
+                    new15minData = pd.read_csv(f'{dirName}/{name}')
+                    # drop last row
+                    new15minData = newData.drop(newData.index[[-1]])
+                    new15minData['DateTypeDate'] = stringToDate(new15minData['Date'].values.ravel())
+                    # dump 15minData into 1HourData
+                    hourRoundedDate = dt.datetime(date.year, date.month, date.day, date.hour, 0, 0)
+                    # init newHourData
+                    newHourData = new15minData.copy()
+                    newHourData.drop(newHourData.index[:])
+                    for row in new15minData.index:
+                        # if the row is within 1hour since last, dump it into the row
+                        if new15minData.loc[row, 'DateTypeDate'].hour == hourRoundedDate.hour:
+                            newHourData.loc[row, 'High'] = max(newHourData.loc[row, 'High'], new15minData.loc[row, 'High'])
+                            newHourData.loc[row, 'Low'] = min(newHourData.loc[row, 'Low'], new15minData.loc[row, 'Low'])
+                            # only for the last one. For convenience, we propose it for all
+                            newHourData.loc[row, 'Close'] = new15minData.loc[row, 'Close']
+                            newHourData.loc[row, 'time_close'] = new15minData.loc[row, 'time_close']
+                        # should create new row for the next hour
+                        else:
+                            hourRoundedDate += dt.timedelta(hours=1)
+                            newHourData.loc[row] = new15minData.loc[row]
+                            newHourData.loc['time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
+                    # if old data is empty
+                    if data is None:
+                        data = newHourData.copy()
+                    else:
+                        data = pd.concat([data, newHourData])
+                data = data.drop(['Volume', 'trades_count'], axis=1).dropna().reset_index(drop=True)
+                data['LabelCNNPost1'] = nu.nan
+                del fileNames
+                # calculate graphData and update label
+                data = generateGraphDataAndLabel(data=data, ts=data.index.values.ravel(), resolution=resolution, timeSpreadPast=int(timeSpreadPast), timeSpreadFuture=int(timeSpreadFuture), graphDataDir=graphDataDir)
                 data.to_csv(storedFilePath, index=False, header=True)
 
         timeCost = (dt.datetime.now() - _start).total_seconds()
@@ -325,7 +426,7 @@ def stringToDate(dateString):
 
 
 if __name__ == '__main__':
-    worker = PreprocessingWorker()
+    worker = PreprocessingWorker(resolution=int(24*8), timeSpreadPast=int(24*8))
     # worker.process()
     # worker.showData(path='./LabeledData/15MIN.csv')
 
