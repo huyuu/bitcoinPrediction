@@ -66,7 +66,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         self.isHugeMemorryMode = isHugeMemorryMode
         if isHugeMemorryMode:
             with mp.Pool(processes=min(mp.cpu_count()-1, 8)) as pool:
-                files = list(filter(lambda path: path.split('.')[1] == 'csv', os.listdir('./LabeledData/graphData')))
+                files = list(filter(lambda path: path.split('.')[1] == 'csv', os.listdir(f'./LabeledData/{span}/graphData')))
                 self.graphData = pool.map(getGraphData, files)
                 self.graphData = { data[0]: data[1] for data in self.graphData }
             # self.graphData = { path: pd.read_csv(f'./LabeledData/graphData/{path}', index_col=0).values for path in os.listdir('./LabeledData/graphData') if path.split('.')[1] == 'csv' }
