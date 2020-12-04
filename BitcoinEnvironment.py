@@ -27,8 +27,8 @@ from PreprocessingWorker import stringToDate, dateToString
 
 # Model
 
-def getGraphData(path):
-    return (path, pd.read_csv(f'./LabeledData/graphData/{path}', index_col=0).values)
+def getGraphData(path, span='1HOUR'):
+    return (path, pd.read_csv(f'./LabeledData/{span}/graphData/{path}', index_col=0).values)
 
 
 class BTC_JPY_Environment(py_environment.PyEnvironment):
