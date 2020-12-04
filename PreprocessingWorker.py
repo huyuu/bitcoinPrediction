@@ -12,7 +12,6 @@ import multiprocessing as mp
 # path = "BTC-JPY.csv"
 coinApiKeys = ["BF49F16C-E6CF-4B26-A22E-F32599C6E404", "F5F1D416-EAEF-4654-ADA9-D728E9C9A226", "4934D542-652A-46AB-A6A8-BFC8511B251A", "55256919-0DF4-45A0-B899-581C990D6E5E", "94483EBE-A1B9-49DC-8ED8-B35BC986A1A6", "AFA241C6-C5DE-4BD7-8033-4C7175F83A21", "BE9D33EB-F1BB-4435-9614-38EF94DF2C4F"]
 
-
 class PreprocessingWorker():
     def __init__(self, resolution, timeSpreadPast):
         self.resolution = resolution
@@ -111,8 +110,8 @@ class PreprocessingWorker():
         # general constants
         dirName = './HistoryData'
         storedDirName = './LabeledData'
-        storedFilePath = f'{storedDirName}/{span}.csv'
-        graphDataDir = f'./{storedDirName}/graphData'
+        storedFilePath = f'{storedDirName}/{span}/labeledData.csv'
+        graphDataDir = f'./{storedDirName}/{span}/graphData.csv'
         if not os.path.exists(graphDataDir):
             os.mkdir(graphDataDir)
         # switch for span
@@ -217,20 +216,22 @@ class PreprocessingWorker():
                     hourRoundedDate = dt.datetime(date.year, date.month, date.day, date.hour, 0, 0)
                     # init newHourData
                     newHourData = new15minData.copy()
-                    newHourData.drop(newHourData.index[:])
+                    # newHourData.drop(newHourData.index[[-1]])
                     for row in new15minData.index:
                         # if the row is within 1hour since last, dump it into the row
                         if new15minData.loc[row, 'DateTypeDate'].hour == hourRoundedDate.hour:
-                            newHourData.loc[row, 'High'] = max(newHourData.loc[row, 'High'], new15minData.loc[row, 'High'])
-                            newHourData.loc[row, 'Low'] = min(newHourData.loc[row, 'Low'], new15minData.loc[row, 'Low'])
+                            lastIndex = newHourData.index[-1]
+                            newHourData.loc[lastIndex, 'High'] = max(newHourData.loc[lastIndex, 'High'], new15minData.loc[row, 'High'])
+                            newHourData.loc[lastIndex, 'Low'] = min(newHourData.loc[lastIndex, 'Low'], new15minData.loc[row, 'Low'])
                             # only for the last one. For convenience, we propose it for all
-                            newHourData.loc[row, 'Close'] = new15minData.loc[row, 'Close']
-                            newHourData.loc[row, 'time_close'] = new15minData.loc[row, 'time_close']
+                            newHourData.loc[lastIndex, 'Close'] = new15minData.loc[row, 'Close']
+                            newHourData.loc[lastIndex, 'time_close'] = new15minData.loc[row, 'time_close']
                         # should create new row for the next hour
                         else:
                             hourRoundedDate += dt.timedelta(hours=1)
-                            newHourData.loc[row] = new15minData.loc[row]
-                            newHourData.loc['time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
+                            newHourData = newHourData.append(new15minData.loc[row], ignore_index=True)
+                            lastIndex = newHourData.index[-1]
+                            newHourData.loc[lastIndex, 'time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
                     # get the specific row of the old data to insert into
                     rowIndex = data.loc[data['Date'] == dateToString(date)].index.values
                     if rowIndex.shape[0] != 0:
@@ -265,26 +266,32 @@ class PreprocessingWorker():
                 for name, date in fileNames:
                     new15minData = pd.read_csv(f'{dirName}/{name}')
                     # drop last row
-                    new15minData = newData.drop(newData.index[[-1]])
+                    new15minData = new15minData.drop(new15minData.index[[-1]])
                     new15minData['DateTypeDate'] = stringToDate(new15minData['Date'].values.ravel())
                     # dump 15minData into 1HourData
                     hourRoundedDate = dt.datetime(date.year, date.month, date.day, date.hour, 0, 0)
+                    # hourRoundedDate = dt.datetime(new15minData.loc[0, 'DateTypeDate'].year, new15minData.loc[0, 'DateTypeDate'].month, new15minData.loc[0, 'DateTypeDate'].day, new15minData.loc[0, 'DateTypeDate'].hour, 0, 0)
                     # init newHourData
                     newHourData = new15minData.copy()
-                    newHourData.drop(newHourData.index[:])
-                    for row in new15minData.index:
+                    # drop all the rows except the first
+                    newHourData = newHourData.drop(newHourData.index[1:])
+                    # update the first row's time_period_end to the start of the next hour
+                    newHourData.loc[0, 'time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
+                    for row in new15minData.index[1:]:
                         # if the row is within 1hour since last, dump it into the row
                         if new15minData.loc[row, 'DateTypeDate'].hour == hourRoundedDate.hour:
-                            newHourData.loc[row, 'High'] = max(newHourData.loc[row, 'High'], new15minData.loc[row, 'High'])
-                            newHourData.loc[row, 'Low'] = min(newHourData.loc[row, 'Low'], new15minData.loc[row, 'Low'])
+                            lastIndex = newHourData.index[-1]
+                            newHourData.loc[lastIndex, 'High'] = max(newHourData.loc[lastIndex, 'High'], new15minData.loc[row, 'High'])
+                            newHourData.loc[lastIndex, 'Low'] = min(newHourData.loc[lastIndex, 'Low'], new15minData.loc[row, 'Low'])
                             # only for the last one. For convenience, we propose it for all
-                            newHourData.loc[row, 'Close'] = new15minData.loc[row, 'Close']
-                            newHourData.loc[row, 'time_close'] = new15minData.loc[row, 'time_close']
+                            newHourData.loc[lastIndex, 'Close'] = new15minData.loc[row, 'Close']
+                            newHourData.loc[lastIndex, 'time_close'] = new15minData.loc[row, 'time_close']
                         # should create new row for the next hour
                         else:
                             hourRoundedDate += dt.timedelta(hours=1)
-                            newHourData.loc[row] = new15minData.loc[row]
-                            newHourData.loc['time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
+                            newHourData = newHourData.append(new15minData.loc[row], ignore_index=True)
+                            lastIndex = newHourData.index[-1]
+                            newHourData.loc[lastIndex, 'time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
                     # if old data is empty
                     if data is None:
                         data = newHourData.copy()
@@ -359,23 +366,24 @@ class PreprocessingWorker():
         return data
 
 
-    def downloadAndUpdateHistoryDataToLatest(self, shouldCalculateLabelsFromBegining):
-        dirName = './HistoryData'
-        fileNames = filter(lambda name: '.csv' in name and os.stat(f'{dirName}/{name}').st_size > 10, os.listdir(dirName))
-        fileNames = sorted([ (name, dt.datetime.strptime(name.split('.csv')[0], '%Y_%m_%d_%H_%M')) for name in fileNames ], key=lambda pair: pair[1])
-        storedDirName = './LabeledData'
-        storedFilePath = f'{storedDirName}/15MIN.csv'
-        graphDataDir = f'./{storedDirName}/graphData'
+    def downloadAndUpdateHistoryDataToLatest(self, shouldCalculateLabelsFromBegining, shouldConductDownload=True, span='15MIN'):
+        # dirName = './HistoryData'
+        # fileNames = filter(lambda name: '.csv' in name and os.stat(f'{dirName}/{name}').st_size > 10, os.listdir(dirName))
+        # fileNames = sorted([ (name, dt.datetime.strptime(name.split('.csv')[0], '%Y_%m_%d_%H_%M')) for name in fileNames ], key=lambda pair: pair[1])
+        # storedDirName = './LabeledData'
+        # storedFilePath = f'{storedDirName}/{span}.csv'
+        # graphDataDir = f'./{storedDirName}/graphData'
         # dowload data
         start = fileNames[-2][1]
         now = dt.datetime.utcnow()
-        self.download15MinuteSpanData(start=start, end=now)
+        if shouldConductDownload:
+            self.download15MinuteSpanData(start=start, end=now)
         # calculate 15MIN.csv
         if shouldCalculateLabelsFromBegining:
-            data = self.processShortermHistoryData(startDate=None, resolution=self.resolution, timeSpreadPast=self.timeSpreadPast)
+            data = self.processShortermHistoryData(startDate=None, resolution=self.resolution, timeSpreadPast=self.timeSpreadPast, span=span)
             return data
         else:
-            data = self.processShortermHistoryData(startDate=start, resolution=self.resolution, timeSpreadPast=self.timeSpreadPast)
+            data = self.processShortermHistoryData(startDate=start, resolution=self.resolution, timeSpreadPast=self.timeSpreadPast, span=span)
             return data
 
 
@@ -438,4 +446,4 @@ if __name__ == '__main__':
 
     # worker.processShortermHistoryData(span='15MIN')
 
-    worker.downloadAndUpdateHistoryDataToLatest(shouldCalculateLabelsFromBegining=False)
+    worker.downloadAndUpdateHistoryDataToLatest(shouldCalculateLabelsFromBegining=False, shouldConductDownload=False, span='1HOUR')

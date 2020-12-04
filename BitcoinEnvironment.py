@@ -32,7 +32,7 @@ def getGraphData(path):
 
 
 class BTC_JPY_Environment(py_environment.PyEnvironment):
-    def __init__(self, imageWidth, imageHeight, initialAsset, dtype=nu.float32, isHugeMemorryMode=True, shouldGiveRewardsFinally=True, gamma=0.99):
+    def __init__(self, imageWidth, imageHeight, initialAsset, dtype=nu.float32, isHugeMemorryMode=True, shouldGiveRewardsFinally=True, gamma=0.99, span='1HOUR'):
         self.dtype = dtype
         self.__actionSpec = BoundedArraySpec(shape=(2,), dtype=self.dtype, minimum=-1, maximum=1, name='action')
         # https://www.tensorflow.org/agents/api_docs/python/tf_agents/environments/py_environment/PyEnvironment#observation_spec
@@ -52,7 +52,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         self.imageWidth = imageWidth
         self.imageHeight = imageHeight
 
-        self.data = pd.read_csv('./LabeledData/15MIN.csv').dropna(axis=1)
+        self.data = pd.read_csv(f'./LabeledData/{span}/labeledData.csv').dropna(axis=1)
         self.data['DateTypeDate'] = stringToDate(self.data['Date'].values.ravel())
         self.possibleStartDate = [ pd.Timestamp(nu_date).to_pydatetime() for nu_date in self.data.iloc[:-int(4*24*31*3), :].loc[:, 'DateTypeDate'].values.ravel() ]
         startDate = nu.random.choice(self.possibleStartDate)
