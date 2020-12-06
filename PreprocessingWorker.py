@@ -111,7 +111,7 @@ class PreprocessingWorker():
         dirName = './HistoryData'
         storedDirName = './LabeledData'
         storedFilePath = f'{storedDirName}/{span}/labeledData.csv'
-        graphDataDir = f'./{storedDirName}/{span}/graphData.csv'
+        graphDataDir = f'./{storedDirName}/{span}/graphData'
         if not os.path.exists(graphDataDir):
             os.mkdir(graphDataDir)
         # switch for span
@@ -367,9 +367,9 @@ class PreprocessingWorker():
 
 
     def downloadAndUpdateHistoryDataToLatest(self, shouldCalculateLabelsFromBegining, shouldConductDownload=True, span='15MIN'):
-        # dirName = './HistoryData'
-        # fileNames = filter(lambda name: '.csv' in name and os.stat(f'{dirName}/{name}').st_size > 10, os.listdir(dirName))
-        # fileNames = sorted([ (name, dt.datetime.strptime(name.split('.csv')[0], '%Y_%m_%d_%H_%M')) for name in fileNames ], key=lambda pair: pair[1])
+        dirName = './HistoryData'
+        fileNames = filter(lambda name: '.csv' in name and os.stat(f'{dirName}/{name}').st_size > 10, os.listdir(dirName))
+        fileNames = sorted([ (name, dt.datetime.strptime(name.split('.csv')[0], '%Y_%m_%d_%H_%M')) for name in fileNames ], key=lambda pair: pair[1])
         # storedDirName = './LabeledData'
         # storedFilePath = f'{storedDirName}/{span}.csv'
         # graphDataDir = f'./{storedDirName}/graphData'
@@ -395,12 +395,13 @@ def generateGraphDataAndLabel(data, ts, resolution, timeSpreadPast, timeSpreadFu
         # if data up to +timeSpreadFuture is available, label it.
         if t+timeSpreadFuture in data.index.values:
             # prepare for labeling
-            nowMiddle = (data.loc[t, 'High'] + data.loc[t, 'Low'])/2
+            # nowMiddle = (data.loc[t, 'High'] + data.loc[t, 'Low'])/2
+            nowClose = data.loc[t, 'Close']
             futureMiddle = (data.loc[t+1:t+1+timeSpreadFuture, 'High'].values.ravel().mean() + data.loc[t+1:t+1+timeSpreadFuture, 'Low'].values.ravel().mean())/2
             sigma = nu.abs((data.loc[t, 'High'] - data.loc[t, 'Low'])/(1.96*2))
-            if futureMiddle > nowMiddle + 1.96*sigma:
+            if futureMiddle > nowClose + 1.96*sigma:
                 data.loc[t, 'LabelCNNPost1'] = 0
-            elif futureMiddle >= nowMiddle - 1.96*sigma:
+            elif futureMiddle >= nowClose - 1.96*sigma:
                 data.loc[t, 'LabelCNNPost1'] = 1
             else:
                 data.loc[t, 'LabelCNNPost1'] = 2
@@ -446,4 +447,4 @@ if __name__ == '__main__':
 
     # worker.processShortermHistoryData(span='15MIN')
 
-    worker.downloadAndUpdateHistoryDataToLatest(shouldCalculateLabelsFromBegining=False, shouldConductDownload=False, span='1HOUR')
+    worker.downloadAndUpdateHistoryDataToLatest(shouldCalculateLabelsFromBegining=True, shouldConductDownload=False, span='15MIN')

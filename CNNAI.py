@@ -15,7 +15,7 @@ from PreprocessingWorker import PreprocessingWorker, dateToString, stringToDate
 class CNNAI():
     def __init__(self):
         self.resolution = int(24*8)
-        self.timeSpreadPast = int(24*4)
+        self.timeSpreadPast = int(24*8)
         self.model = self.__buildModel()
         self.isModelLoaded = False
         self.modelPath = "cnnmodel.h5"
@@ -31,17 +31,22 @@ class CNNAI():
             os.mkdir(dirName)
         # get labeled span data
         span = '15MIN'
-        path = f'{dirName}/{span}.csv'
+        path = f'{dirName}/{span}/labeledData.csv'
         data = pd.read_csv(path).dropna().reset_index(drop=True)
         # latest data is unstable, should be dropped.
-        data = data.drop(data.index[-self.timeSpreadPast:]).reindex(nu.random.permutation(data.index)).reset_index(drop=True)
+        data = data.drop(data.index[-self.timeSpreadPast:])
+        data = data.reindex(nu.random.permutation(data.index))
+        data = data.reset_index(drop=True)
         print('class probability:\n{}%'.format(data.groupby('LabelCNNPost1').size() / float(data.index.values.ravel().shape[0]) * 100))
         graphAmount = data.index.values.ravel().shape[0]
         graphData = nu.zeros((graphAmount, self.timeSpreadPast, self.resolution), dtype=nu.int)
         # get graph
-        for i, dateString in enumerate(data['Date'].values.ravel()):
+        # for i, dateString in enumerate(data['Date'].values.ravel()):
+        for i in data.index:
+            dateString = data.loc[i, 'Date']
+            # print(f'data[{i}] = {data.loc[i]}')
             graphName = dateString.split('.')[0].replace('T', '_').replace(':', '-')
-            _graphData = pd.read_csv(f'{dirName}/graphData/{graphName}.csv', index_col=0)
+            _graphData = pd.read_csv(f'{dirName}/{span}/graphData/{graphName}.csv', index_col=0)
             graphData[i, :, :] = _graphData.values.reshape(self.timeSpreadPast, self.resolution)
             # print(f'{i} of {graphAmount}')
         graphData = graphData.reshape(graphAmount, self.timeSpreadPast, self.resolution, 1)
@@ -183,5 +188,5 @@ if __name__ == '__main__':
     worker = PreprocessingWorker(resolution=cnnModel.resolution, timeSpreadPast=cnnModel.timeSpreadPast)
 
     # worker.processShortermHistoryData(span='15MIN', resolution=cnnModel.resolution, timeSpreadPast=cnnModel.timeSpreadPast)
-    #  cnnModel.train()
+    cnnModel.train()
     cnnModel.showModelBreviation(graphDataDir='./StoredData')
