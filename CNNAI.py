@@ -72,10 +72,10 @@ class CNNAI():
         print(f'Model training ends with accuracy {accuracy}. (time cost: {timeCost} seconds)')
 
 
-    def showModelBreviation(self, graphDataDir):
+    def showModelBreviation(self, graphDataDir, span='15MIN'):
         # get valid model
         self.__checkAndHandleLoadingModel()
-        data = pd.read_csv('./LabeledData/15MIN.csv')
+        data = pd.read_csv('./LabeledData/{span}/labeledData.csv')
         # set target time
         # targetTime = dt.datetime(2020, 7, 23, 0, 0, 0)
         targetTime = stringToDate(data.loc[data.index.values.shape[0]-1, 'Date'])
@@ -189,4 +189,4 @@ if __name__ == '__main__':
 
     # worker.processShortermHistoryData(span='15MIN', resolution=cnnModel.resolution, timeSpreadPast=cnnModel.timeSpreadPast)
     cnnModel.train()
-    cnnModel.showModelBreviation(graphDataDir='./StoredData')
+    # cnnModel.showModelBreviation(graphDataDir='./StoredData')
