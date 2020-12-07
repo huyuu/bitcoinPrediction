@@ -21,7 +21,7 @@ class CNNAI():
         self.modelPath = "cnnmodel.h5"
 
 
-    def train(self, testifyRadio=0.2, accuracyNeeded=0.45):
+    def train(self, testifyRadio=0.2, accuracyNeeded=0.45, trainEpochsEachTime=50):
         _start = dt.datetime.now()
         # check if dir exists
         dirName = './LabeledData'
@@ -61,7 +61,7 @@ class CNNAI():
         # Second, train until accuracy needed is achieved
         accuracy = 0
         while accuracy < accuracyNeeded:
-            self.model.fit(trainSamples, trainLabels.ravel(), epochs=20)
+            self.model.fit(trainSamples, trainLabels.ravel(), epochs=trainEpochsEachTime)
             loss, accuracy = self.model.evaluate(testSamples, testLabels.ravel())
             if accuracy < accuracyNeeded:
                 print('Accuracy not enough, try again ...')
