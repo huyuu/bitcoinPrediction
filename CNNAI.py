@@ -169,7 +169,7 @@ class CNNAI():
             kr.layers.Flatten(),
             kr.layers.Dense(50, activation='relu'),
             kr.layers.Dropout(0.25),
-            kr.layers.Dense(3, activation='softmax')
+            kr.layers.Dense(3, activation='tanh')
         ])
         model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
         return model
