@@ -21,7 +21,7 @@ class CNNAI():
         self.modelPath = "cnnmodel.h5"
 
 
-    def train(self, testifyRadio=0.2, accuracyNeeded=0.45, trainEpochsEachTime=50):
+    def train(self, testifyRadio=0.2, accuracyNeeded=0.45, trainEpochsEachTime=20):
         _start = dt.datetime.now()
         # check if dir exists
         dirName = './LabeledData'
@@ -167,9 +167,10 @@ class CNNAI():
             kr.layers.MaxPooling2D(pool_size=(2, 2)),
             kr.layers.Dropout(0.25),
             kr.layers.Flatten(),
-            kr.layers.Dense(50, activation='relu'),
+            # kr.layers.Dense(50, activation='relu'),
+            kr.layers.Dense(50, activation='tanh'),
             kr.layers.Dropout(0.25),
-            kr.layers.Dense(3, activation='tanh')
+            kr.layers.Dense(3, activation='softmax')
         ])
         model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
         return model
