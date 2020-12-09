@@ -91,8 +91,8 @@ if __name__ == '__main__':
 
     # (num_units, kernel_size, stride)
     # critic_observationConvLayerParams = [int(observation_spec['observation_market'].shape[0]//4)]
-    critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//50), int(observation_spec['observation_market'].shape[0]//50)]
-    actor_denseLayerParams = [int(observation_spec['observation_market'].shape[0]//50), int(observation_spec['observation_market'].shape[0]//50)]
+    # critic_commonDenseLayerParams = [int(observation_spec['observation_market'].shape[0]//50), int(observation_spec['observation_market'].shape[0]//50)]
+    # actor_denseLayerParams = [int(observation_spec['observation_market'].shape[0]//50), int(observation_spec['observation_market'].shape[0]//50)]
 
     collect_episodes_per_iteration = 10
     _storeFullEpisodes = 200
