@@ -28,7 +28,7 @@ from CNNAI import CNNAI
 
 # Model
 
-def getGraphData(path, span='1HOUR'):
+def getGraphData(path, span='15MIN'):
     return (path, pd.read_csv(f'./LabeledData/{span}/graphData/{path}', index_col=0).values)
 
 
