@@ -13,12 +13,17 @@ from PreprocessingWorker import PreprocessingWorker, dateToString, stringToDate
 
 
 class CNNAI():
-    def __init__(self):
+    def __init__(self, model=None):
         self.resolution = int(24*8)
         self.timeSpreadPast = int(24*8)
-        self.model = self.__buildModel()
-        self.isModelLoaded = False
         self.modelPath = "cnnmodel.h5"
+        if model is None:
+            self.model = self.__buildModel()
+            self.isModelLoaded = False
+        else:
+            self.model = model
+            self.isModelLoaded = True
+
 
 
     def train(self, testifyRadio=0.2, accuracyNeeded=0.45, trainEpochsEachTime=20):

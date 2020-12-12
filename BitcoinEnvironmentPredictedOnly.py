@@ -81,11 +81,11 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         modelPath = 'cnnmodel.h5'
         if os.path.exists(modelPath):
             model = tf.keras.models.load_model(modelPath)
-            self.model = model
+            self.cnnAI = CNNAI(model=model)
         else:
             print("Model not given, start training ...")
-            self.model = CNNAI()
-            self.model.train()
+            self.cnnAI = CNNAI(model=None)
+            self.cnnAI.train()
 
 
     # required
@@ -121,7 +121,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
             marketSnapshot = pd.read_csv(_graphPath, index_col=0).values
         marketSnapshot = marketSnapshot.astype(self.dtype)
-        predictedCategory = self.model.predictFromCurrentData(data=marketSnapshot, now=self.currentDate, shouldSaveGraph=False)
+        predictedCategory = self.cnnAI.predictFromCurrentData(data=marketSnapshot, now=self.currentDate, shouldSaveGraph=False)
         # self.currentState = nu.append(marketSnapshot, self.holdingRate)
         # self.currentState = (marketSnapshot, nu.array([self.holdingRate], dtype=self.dtype))
         # self.currentState = {
@@ -168,7 +168,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
             nextMarketSnapshot = pd.read_csv(_graphPath, index_col=0).values
         nextMarketSnapshot = nextMarketSnapshot.astype(self.dtype)
-        predictedCategory = self.model.predictFromCurrentData(data=nextMarketSnapshot, now=self.currentDate, shouldSaveGraph=False)
+        predictedCategory = self.cnnAI.predictFromCurrentData(data=nextMarketSnapshot, now=self.currentDate, shouldSaveGraph=False)
         # get next holding rate according to specific action taken
         # action[0] = percentage of selling(+) holdingJPY / selling(-) holdingBTC
         # action[1] = exchanging rate (relatively to current rate)
