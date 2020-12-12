@@ -33,8 +33,9 @@ def getGraphData(path, span='15MIN'):
 
 
 class BTC_JPY_Environment(py_environment.PyEnvironment):
-    def __init__(self, imageWidth, imageHeight, initialAsset, dtype=nu.float32, isHugeMemorryMode=True, shouldGiveRewardsFinally=True, gamma=0.99, span='1HOUR'):
+    def __init__(self, imageWidth, imageHeight, initialAsset, dtype=nu.float32, isHugeMemorryMode=True, shouldGiveRewardsFinally=True, gamma=0.99, span='15MIN'):
         self.dtype = dtype
+        self.span = span
         self.__actionSpec = BoundedArraySpec(shape=(2,), dtype=self.dtype, minimum=-1, maximum=1, name='action')
         # https://www.tensorflow.org/agents/api_docs/python/tf_agents/environments/py_environment/PyEnvironment#observation_spec
         # https://www.tensorflow.org/agents/api_docs/python/tf_agents/typing/types/NestedArraySpec
@@ -104,7 +105,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         self.holdingRate = 0.0
         self.currentPrice = 0.0
         # get available current date
-        _graphDir = './LabeledData/graphData'
+        _graphDir = f'./LabeledData/{self.span}/graphData'
         while True:
             self.currentDate = nu.random.choice(self.possibleStartDate)
             _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
@@ -149,7 +150,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             # get next data
             nextData = self.data.loc[self.data['DateTypeDate']==self.currentDate, :]
             if len(nextData['Open'].values.ravel()) != 0:
-                _graphPath = './LabeledData/graphData/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
+                _graphPath = f'./LabeledData/{self.span}/graphData/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
                 if os.path.exists(_graphPath):
                     break
                 else:
@@ -159,7 +160,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         self.currentPrice = nextData['Open'].values.ravel()[0]
         nextClosePrice = nextData['Close'].values.ravel()[0]
         # get next market snapshot
-        _graphDir = './LabeledData/graphData'
+        _graphDir = f'./LabeledData/{self.span}/graphData'
         if self.isHugeMemorryMode:
             _graphPath = self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
             nextMarketSnapshot = self.graphData[f'{_graphPath}']
