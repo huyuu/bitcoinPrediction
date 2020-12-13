@@ -163,7 +163,7 @@ class CNNAI():
             pl.imshow(nu.rot90(graphArray), cmap = 'gray')
             fig.savefig('latestPrediction.png')
             pl.close(fig)
-        return int(prediction - 1)
+        return prediction
 
 
     def predictFromCurrentGraphData(self, data, now, shouldSaveGraph, graphDataDir=None):
@@ -180,7 +180,7 @@ class CNNAI():
             pl.imshow(nu.rot90(data), cmap = 'gray')
             fig.savefig('latestPrediction.png')
             pl.close(fig)
-        return int(prediction - 1)
+        return prediction
 
 
     def __buildModel(self):

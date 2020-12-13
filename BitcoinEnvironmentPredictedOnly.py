@@ -44,7 +44,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         #     'observation_predictedCategory': BoundedArraySpec(shape=(1,), dtype=self.dtype, minimum=-1, maximum=1, name='observation_predictedCategory'),
         #     'observation_holdingRate': BoundedArraySpec(shape=(1,), dtype=self.dtype, minimum=0, maximum=1, name='observation_holdingRate')
         # }
-        self.__observationSpec = BoundedArraySpec(shape=(2,), dtype=self.dtype, minimum=-1, maximum=1, name='observation')
+        self.__observationSpec = BoundedArraySpec(shape=(4,), dtype=self.dtype, minimum=0, maximum=1, name='observation')
         self.holdingBTC = 0
         self.holdingJPY = initialAsset
         self.initialAsset = initialAsset
@@ -121,14 +121,14 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
             marketSnapshot = pd.read_csv(_graphPath, index_col=0).values
         marketSnapshot = marketSnapshot.astype(self.dtype)
-        predictedCategory = self.cnnAI.predictFromCurrentGraphData(data=marketSnapshot, now=self.currentDate, shouldSaveGraph=False)
+        predictedProbabilities = self.cnnAI.predictFromCurrentGraphData(data=marketSnapshot, now=self.currentDate, shouldSaveGraph=False)
         # self.currentState = nu.append(marketSnapshot, self.holdingRate)
         # self.currentState = (marketSnapshot, nu.array([self.holdingRate], dtype=self.dtype))
         # self.currentState = {
         #     'observation_predictedCategory': predictedCategory,
         #     'observation_holdingRate': nu.array([self.holdingRate], dtype=self.dtype)
         # }
-        self.currentState = nu.array([predictedCategory, self.holdingRate], dtype=self.dtype)
+        self.currentState = nu.array([predictedProbabilities[0], predictedProbabilities[1], predictedProbabilities[2], self.holdingRate], dtype=self.dtype)
         self.episodeCount = 0
         return ts.restart(self.currentState)
 
@@ -168,7 +168,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
             nextMarketSnapshot = pd.read_csv(_graphPath, index_col=0).values
         nextMarketSnapshot = nextMarketSnapshot.astype(self.dtype)
-        predictedCategory = self.cnnAI.predictFromCurrentGraphData(data=nextMarketSnapshot, now=self.currentDate, shouldSaveGraph=False)
+        predictedProbabilities = self.cnnAI.predictFromCurrentGraphData(data=nextMarketSnapshot, now=self.currentDate, shouldSaveGraph=False)
         # get next holding rate according to specific action taken
         # action[0] = percentage of selling(+) holdingJPY / selling(-) holdingBTC
         # action[1] = exchanging rate (relatively to current rate)
@@ -208,7 +208,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         #     'observation_predictedCategory': predictedCategory,
         #     'observation_holdingRate': nu.array([self.holdingRate], dtype=self.dtype)
         # }
-        self.currentState = nu.array([predictedCategory, self.holdingRate], dtype=self.dtype)
+        self.currentState = nu.array([predictedProbabilities[0], predictedProbabilities[1], predictedProbabilities[2], self.holdingRate], dtype=self.dtype)
         # returns
         if not self.shouldGiveRewardsFinally:
             assetAfterAction = nextClosePrice * self.holdingBTC + self.holdingJPY

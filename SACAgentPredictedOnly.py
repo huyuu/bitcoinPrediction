@@ -196,7 +196,7 @@ if __name__ == '__main__':
     actor_net = actor_distribution_network.ActorDistributionNetwork(
         observation_spec,
         action_spec,
-        fc_layer_params=[2],
+        fc_layer_params=[4, 4],
         continuous_projection_net=(
         tanh_normal_projection_network.TanhNormalProjectionNetwork)
     )
