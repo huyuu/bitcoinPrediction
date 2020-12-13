@@ -121,7 +121,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
             marketSnapshot = pd.read_csv(_graphPath, index_col=0).values
         marketSnapshot = marketSnapshot.astype(self.dtype)
-        predictedCategory = self.cnnAI.predictFromCurrentData(data=marketSnapshot, now=self.currentDate, shouldSaveGraph=False)
+        predictedCategory = self.cnnAI.predictFromCurrentGraphData(data=marketSnapshot, now=self.currentDate, shouldSaveGraph=False)
         # self.currentState = nu.append(marketSnapshot, self.holdingRate)
         # self.currentState = (marketSnapshot, nu.array([self.holdingRate], dtype=self.dtype))
         # self.currentState = {
@@ -168,7 +168,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
             nextMarketSnapshot = pd.read_csv(_graphPath, index_col=0).values
         nextMarketSnapshot = nextMarketSnapshot.astype(self.dtype)
-        predictedCategory = self.cnnAI.predictFromCurrentData(data=nextMarketSnapshot, now=self.currentDate, shouldSaveGraph=False)
+        predictedCategory = self.cnnAI.predictFromCurrentGraphData(data=nextMarketSnapshot, now=self.currentDate, shouldSaveGraph=False)
         # get next holding rate according to specific action taken
         # action[0] = percentage of selling(+) holdingJPY / selling(-) holdingBTC
         # action[1] = exchanging rate (relatively to current rate)

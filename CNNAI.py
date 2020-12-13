@@ -166,6 +166,23 @@ class CNNAI():
         return int(prediction - 1)
 
 
+    def predictFromCurrentGraphData(self, data, now, shouldSaveGraph, graphDataDir=None):
+        prediction = self.model.predict(data.reshape(1, self.timeSpreadPast, self.resolution, 1))[0]
+        if shouldSaveGraph:
+            assert graphDataDir != None
+            data.to_csv(f'{graphDataDir}/{graphName}.csv', index=True, header=True)
+            terms = ['+', '=', '-']
+            print('@UTC {} Prediction: {} (+:{:.3g}%, =:{:.3g}%, -:{:.3g}%)'.format(now.strftime('%Y-%m-%d %H:%M:%S'), terms[nu.argmax(prediction)], prediction[0]*100, prediction[1]*100, prediction[2]*100))
+            fig = pl.figure()
+            pl.title('@{} {} (+:{:.3g}%, =:{:.3g}%, -:{:.3g}%)'.format(now.strftime('%Y-%m-%d %H:%M:%S'), terms[nu.argmax(prediction)], prediction[0]*100, prediction[1]*100, prediction[2]*100), fontsize=24)
+            pl.xlabel('Date', fontsize=22)
+            pl.ylabel('Value', fontsize=22)
+            pl.imshow(nu.rot90(data), cmap = 'gray')
+            fig.savefig('latestPrediction.png')
+            pl.close(fig)
+        return int(prediction - 1)
+
+
     def __buildModel(self):
         model = kr.models.Sequential([
             kr.layers.Conv2D(filters=64, kernel_size=3, activation='relu', input_shape=(self.timeSpreadPast, self.resolution, 1)),
