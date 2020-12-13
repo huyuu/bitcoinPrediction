@@ -32,7 +32,7 @@ from tf_agents.policies import greedy_policy, random_tf_policy, policy_saver
 from tf_agents.utils import common, nest_utils
 import shutil
 # Custom Modules
-from BitcoinEnvironment import BTC_JPY_Environment
+from BitcoinEnvironmentPredictedOnly import BTC_JPY_Environment
 
 
 
