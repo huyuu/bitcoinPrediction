@@ -61,8 +61,8 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         startDate = nu.random.choice(self.possibleStartDate)
         self.currentDate = dt.datetime(startDate.year, startDate.month, startDate.day, startDate.hour, (startDate.minute//15)*15, 0)
 
-        self.episodeCount = 0
-        self.episodeEndSteps = 4*24*30*1
+        self.episodeCount = 0#
+        self.episodeEndSteps = 1*7*24*4  # 1week * 7days/week * 24hours/day * 4quater/hour
         # reward will be clipped to [-1, 1] using reward/(coeff*initAsset)
         self.rewardClipCoeff = 1.0
 
