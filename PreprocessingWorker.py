@@ -347,7 +347,7 @@ class PreprocessingWorker():
                         #
                         newHourData.loc[lastIndex, 'Open'] = newHourData.loc[previousIndex, 'Open']
                         newHourData.loc[lastIndex, 'time_open'] = newHourData.loc[previousIndex, 'time_open']
-                        newHourData.loc[lastIndex, 'time_period_start'] = ddateToString(hourRoundedDate)
+                        newHourData.loc[lastIndex, 'time_period_start'] = dateToString(hourRoundedDate)
                         newHourData.loc[lastIndex, 'time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
                         # adjust High & Low
                         newHourData.loc[lastIndex, 'High'] = max(newHourData.loc[previousIndex, 'High'], newHourData.loc[lastIndex, 'High'])
