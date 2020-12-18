@@ -158,15 +158,14 @@ class PreprocessingWorker():
             for name, date in fileNames[1:]:
                 _newData = pd.read_csv(f'{dirName}/{name}')
                 _newData = _newData.drop(_newData.index[[-1]])
+                _newData['DateTypeDate'] = stringToDate(_newData['Date'].values.ravel())
                 data = pd.concat([data, _newData])
-            data = data.drop(['Volume', 'trades_count'], axis=1).reset_index(drop=True)
+            data = data.drop(['Volume', 'trades_count'], axis=1).dropna().reset_index(drop=True)
             data['LabelCNNPost1'] = nu.nan
             # del data['DateTypeDate']
             # calculate graphData and update label
             # data = generateGraphDataAndLabel(data=data, ts=data.index.values.ravel(), resolution=resolution, timeSpreadPast=int(timeSpreadPast), timeSpreadFuture=int(timeSpreadFuture), graphDataDir=graphDataDir)
-            print(data)
             data.to_csv(storedFilePath, index=False, header=True)
-            print('data15MIN saved.')
 
 
         # 1HOUR Data (normal)
