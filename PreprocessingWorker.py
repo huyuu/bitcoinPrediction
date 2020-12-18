@@ -148,7 +148,7 @@ class PreprocessingWorker():
             # calculate graphData and label
             # data = generateGraphDataAndLabel(data=data, ts=ts, resolution=resolution, timeSpreadPast=int(timeSpreadPast), timeSpreadFuture=int(timeSpreadFuture), graphDataDir=graphDataDir)
             # del data['DateTypeDate']
-            # data.to_csv(storedFilePath, index=False, header=True)
+            data.to_csv(storedFilePath, index=False, header=True)
 
         else: # don't have startDate
             # fetch data
@@ -164,7 +164,7 @@ class PreprocessingWorker():
             # del data['DateTypeDate']
             # calculate graphData and update label
             # data = generateGraphDataAndLabel(data=data, ts=data.index.values.ravel(), resolution=resolution, timeSpreadPast=int(timeSpreadPast), timeSpreadFuture=int(timeSpreadFuture), graphDataDir=graphDataDir)
-            # data.to_csv(storedFilePath, index=False, header=True)
+            data.to_csv(storedFilePath, index=False, header=True)
 
 
         # 1HOUR Data (normal)
@@ -220,7 +220,7 @@ class PreprocessingWorker():
             # calculate graphData and label
             # data = generateGraphDataAndLabel(data=data, ts=ts, resolution=resolution, timeSpreadPast=int(timeSpreadPast), timeSpreadFuture=int(timeSpreadFuture), graphDataDir=graphDataDir)
             # del data1HOUR['DateTypeDate']
-            # data1HOUR.to_csv(storedFilePath, index=False, header=True)
+            data1HOUR.to_csv(storedFilePath, index=False, header=True)
 
         else: # don't have start Date
             data1HOUR = None
@@ -261,7 +261,7 @@ class PreprocessingWorker():
             # del fileNames
             # calculate graphData and update label
             # del data1HOUR['DateTypeDate']
-            # data1HOUR.to_csv(storedFilePath, index=False, header=True)
+            data1HOUR.to_csv(storedFilePath, index=False, header=True)
             # generateGraphDataAndLabel(data=data, ts=data.index.values.ravel(), resolution=resolution, timeSpreadPast=int(timeSpreadPast), timeSpreadFuture=int(timeSpreadFuture), graphDataDir=graphDataDir)
 
 
@@ -318,7 +318,7 @@ class PreprocessingWorker():
                     # ts = nu.concatenate([ts, newIndices])
                     data1HOUR_interpolated = data1HOUR_interpolated.sort_values('DateTypeDate').reset_index(drop=True)
             # del data1HOUR_interpolated['DateTypeDate']
-            # data1HOUR_interpolated.to_csv(storedFilePath, index=False, header=True)
+            data1HOUR_interpolated.to_csv(storedFilePath, index=False, header=True)
 
         else: # don't have start Date
             data1HOUR_interpolated = None
@@ -358,7 +358,7 @@ class PreprocessingWorker():
             data1HOUR_interpolated['LabelCNNPost1'] = nu.nan
             # store
             # del data1HOUR_interpolated['DateTypeDate']
-            # data1HOUR_interpolated.to_csv(storedFilePath, index=False, header=True)
+            data1HOUR_interpolated.to_csv(storedFilePath, index=False, header=True)
         # calculate graphData and update label
         generateGraphDataAndLabel(data, data1HOUR, data1HOUR_interpolated, resolution, timeSpreadPast, timeSpreadFuture=timeSpreadPast//2)
         # calcuate time
@@ -486,10 +486,10 @@ def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, reso
         # label 1HOURData
         # get future average price from now to now+timeSpreadFuture_1hour
         currentHourRoundedTime = dt.datetime(currentTime.year, currentTime.month, currentTime.day, currentTime.hour, 0, 0)
-        t_1hour = data1HOUR.loc[data1HOUR['DateTypeDate'] == currentHourRoundedTime].index
+        t_1hour = data1HOUR.loc[data1HOUR['DateTypeDate'] == currentHourRoundedTime].index[0]
         print(f't_1hour = {t_1hour}')
         # t_1hour = data1HOUR.index[data1HOUR['DateTypeDate'] == currentHourRoundedTime]
-        t_1hour_interpolated = data1HOUR_interpolated.loc[data1HOUR_interpolated['DateTypeDate'] == currentTime].index
+        t_1hour_interpolated = data1HOUR_interpolated.loc[data1HOUR_interpolated['DateTypeDate'] == currentTime].index[0]
         print(f't_1hour_interpolated = {t_1hour_interpolated}')
         # t_1hour_interpolated = data1HOUR_interpolated.index[data1HOUR_interpolated['DateTypeDate'] == currentTime]
         if t_1hour+(timeSpreadFuture+1) in data1HOUR.index:
