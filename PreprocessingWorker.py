@@ -233,16 +233,15 @@ class PreprocessingWorker():
                 new15minData = new15minData.drop(new15minData.index[[-1]])
                 new15minData['DateTypeDate'] = stringToDate(new15minData['Date'].values.ravel())
                 # dump 15minData into 1HourData
-                hourRoundedDate = dt.datetime(date.year, date.month, date.day, date.hour, 0, 0)
-                # hourRoundedDate = dt.datetime(new15minData.loc[0, 'DateTypeDate'].year, new15minData.loc[0, 'DateTypeDate'].month, new15minData.loc[0, 'DateTypeDate'].day, new15minData.loc[0, 'DateTypeDate'].hour, 0, 0)
+                hourRoundedDate = dt.datetime(new15minData.loc[0, 'DateTypeDate'].year, new15minData.loc[0, 'DateTypeDate'].month, new15minData.loc[0, 'DateTypeDate'].day, new15minData.loc[0, 'DateTypeDate'].hour, 0, 0)
                 # init newHourData
                 newHourData = new15minData.copy()
                 # drop all the rows except the first
-                newHourData = newHourData.drop(newHourData.index[:])
+                newHourData = newHourData.drop(newHourData.index[1:])
                 # update the first row's time_period_end to the start of the next hour
-                # newHourData.loc[0, 'time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
-                # newHourData.loc[0, 'time_period_start'] = dateToString(hourRoundedDate)
-                for row in new15minData.index:
+                newHourData.loc[0, 'time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
+                newHourData.loc[0, 'time_period_start'] = dateToString(hourRoundedDate)
+                for row in new15minData.index[1:]:
                     # if the row is within 1hour since last, dump it into the row
                     if new15minData.loc[row, 'DateTypeDate'].year == hourRoundedDate.year and new15minData.loc[row, 'DateTypeDate'].month == hourRoundedDate.month and new15minData.loc[row, 'DateTypeDate'].day == hourRoundedDate.day and new15minData.loc[row, 'DateTypeDate'].hour == hourRoundedDate.hour:
                         lastIndex = newHourData.index[-1]
@@ -334,16 +333,15 @@ class PreprocessingWorker():
                 new15minData = new15minData.drop(new15minData.index[[-1]])
                 new15minData['DateTypeDate'] = stringToDate(new15minData['Date'].values.ravel())
                 # dump 15minData into 1HourData
-                hourRoundedDate = dt.datetime(date.year, date.month, date.day, date.hour, 0, 0)
-                # hourRoundedDate = dt.datetime(new15minData.loc[0, 'DateTypeDate'].year, new15minData.loc[0, 'DateTypeDate'].month, new15minData.loc[0, 'DateTypeDate'].day, new15minData.loc[0, 'DateTypeDate'].hour, 0, 0)
+                hourRoundedDate = dt.datetime(new15minData.loc[0, 'DateTypeDate'].year, new15minData.loc[0, 'DateTypeDate'].month, new15minData.loc[0, 'DateTypeDate'].day, new15minData.loc[0, 'DateTypeDate'].hour, 0, 0)
                 # init newHourData
                 newHourData = new15minData.copy()
                 # drop all the rows except the first
-                newHourData = newHourData.drop(newHourData.index[:])
+                newHourData = newHourData.drop(newHourData.index[1:])
                 # update the first row's time_period_end to the start of the next hour
-                # newHourData.loc[0, 'time_period_start'] = dateToString(hourRoundedDate)
-                # newHourData.loc[0, 'time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
-                for row in new15minData.index:
+                newHourData.loc[0, 'time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
+                newHourData.loc[0, 'time_period_start'] = dateToString(hourRoundedDate)
+                for row in new15minData.index[1:]:
                     # if the row is not hourRounded
                     if new15minData.loc[row, 'DateTypeDate'].year == hourRoundedDate.year and new15minData.loc[row, 'DateTypeDate'].month == hourRoundedDate.month and new15minData.loc[row, 'DateTypeDate'].day == hourRoundedDate.day and new15minData.loc[row, 'DateTypeDate'].hour == hourRoundedDate.hour:
                         newHourData = newHourData.append(new15minData.loc[row], ignore_index=True)
