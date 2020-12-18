@@ -28,14 +28,13 @@ from CNNAI import CNNAI
 
 # Model
 
-def getGraphData(path, span='15MIN'):
-    return (path, pd.read_csv(f'./LabeledData/{span}/graphData/{path}', index_col=0).values)
+def getGraphData(name, span):
+    return (name, pd.read_csv(f'./LabeledData/{span}/graphData/{name}', index_col=0).values)
 
 
 class BTC_JPY_Environment(py_environment.PyEnvironment):
-    def __init__(self, imageWidth, imageHeight, initialAsset, dtype=nu.float32, isHugeMemorryMode=True, shouldGiveRewardsFinally=True, gamma=0.99, span='15MIN'):
+    def __init__(self, imageWidth, imageHeight, initialAsset, dtype=nu.float32, isHugeMemorryMode=True, shouldGiveRewardsFinally=True, gamma=0.99):
         self.dtype = dtype
-        self.span = span
         self.__actionSpec = BoundedArraySpec(shape=(2,), dtype=self.dtype, minimum=-1, maximum=1, name='action')
         # https://www.tensorflow.org/agents/api_docs/python/tf_agents/environments/py_environment/PyEnvironment#observation_spec
         # https://www.tensorflow.org/agents/api_docs/python/tf_agents/typing/types/NestedArraySpec
@@ -44,7 +43,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         #     'observation_predictedCategory': BoundedArraySpec(shape=(1,), dtype=self.dtype, minimum=-1, maximum=1, name='observation_predictedCategory'),
         #     'observation_holdingRate': BoundedArraySpec(shape=(1,), dtype=self.dtype, minimum=0, maximum=1, name='observation_holdingRate')
         # }
-        self.__observationSpec = BoundedArraySpec(shape=(4,), dtype=self.dtype, minimum=0, maximum=1, name='observation')
+        self.__observationSpec = BoundedArraySpec(shape=(7,), dtype=self.dtype, minimum=0, maximum=1, name='observation')
         self.holdingBTC = 0
         self.holdingJPY = initialAsset
         self.initialAsset = initialAsset
@@ -70,22 +69,32 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         if isHugeMemorryMode:
             with mp.Pool(processes=min(mp.cpu_count()-1, 8)) as pool:
                 files = list(filter(lambda path: path.split('.')[1] == 'csv', os.listdir(f'./LabeledData/{span}/graphData')))
-                self.graphData = pool.map(getGraphData, files)
+                filesAndSpan = [ (file, span) for file in files ]
+                self.graphData = pool.starmap(getGraphData, filesAndSpan)
                 self.graphData = { data[0]: data[1] for data in self.graphData }
             # self.graphData = { path: pd.read_csv(f'./LabeledData/graphData/{path}', index_col=0).values for path in os.listdir('./LabeledData/graphData') if path.split('.')[1] == 'csv' }
         else:
             self.graphData = None
         self.shouldGiveRewardsFinally = shouldGiveRewardsFinally
         self.gamma = gamma
-        # set model
-        modelPath = 'cnnmodel.h5'
+        # set model of 15MIN
+        modelPath = 'cnnmodel15MIN.h5'
         if os.path.exists(modelPath):
             model = tf.keras.models.load_model(modelPath)
-            self.cnnAI = CNNAI(model=model)
+            self.cnnAI15MIN = CNNAI(span='15MIN', model=model)
         else:
             print("Model not given, start training ...")
-            self.cnnAI = CNNAI(model=None)
-            self.cnnAI.train()
+            self.cnnAI15MIN = CNNAI(span='15MIN', model=None)
+            self.cnnAI15MIN.train()
+        # set model of 1HOUR
+        modelPath = 'cnnmodel1HOUR.h5'
+        if os.path.exists(modelPath):
+            model = tf.keras.models.load_model(modelPath)
+            self.cnnAI1HOUR = CNNAI(span='1HOUR', model=model)
+        else:
+            print("Model not given, start training ...")
+            self.cnnAI1HOUR = CNNAI(span='1HOUR', model=None)
+            self.cnnAI1HOUR.train()
 
 
     # required
@@ -104,8 +113,9 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         self.holdingJPY = self.initialAsset
         self.holdingRate = 0.0
         self.currentPrice = 0.0
+        for span in ['15IN', '1HOUR']:
         # get available current date
-        _graphDir = f'./LabeledData/{self.span}/graphData'
+        _graphDir = f'./LabeledData/{span}/graphData'
         while True:
             self.currentDate = nu.random.choice(self.possibleStartDate)
             _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
@@ -121,7 +131,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
             marketSnapshot = pd.read_csv(_graphPath, index_col=0).values
         marketSnapshot = marketSnapshot.astype(self.dtype)
-        predictedProbabilities = self.cnnAI.predictFromCurrentGraphData(data=marketSnapshot, now=self.currentDate, shouldSaveGraph=False)
+        predictedProbabilities = self.cnnAI15MIN.predictFromCurrentGraphData(data=marketSnapshot, now=self.currentDate, shouldSaveGraph=False)
         # self.currentState = nu.append(marketSnapshot, self.holdingRate)
         # self.currentState = (marketSnapshot, nu.array([self.holdingRate], dtype=self.dtype))
         # self.currentState = {
@@ -168,7 +178,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
             nextMarketSnapshot = pd.read_csv(_graphPath, index_col=0).values
         nextMarketSnapshot = nextMarketSnapshot.astype(self.dtype)
-        predictedProbabilities = self.cnnAI.predictFromCurrentGraphData(data=nextMarketSnapshot, now=self.currentDate, shouldSaveGraph=False)
+        predictedProbabilities = self.cnnAI15MIN.predictFromCurrentGraphData(data=nextMarketSnapshot, now=self.currentDate, shouldSaveGraph=False)
         # get next holding rate according to specific action taken
         # action[0] = percentage of selling(+) holdingJPY / selling(-) holdingBTC
         # action[1] = exchanging rate (relatively to current rate)

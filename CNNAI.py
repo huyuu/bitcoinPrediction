@@ -13,10 +13,11 @@ from PreprocessingWorker import PreprocessingWorker, dateToString, stringToDate
 
 
 class CNNAI():
-    def __init__(self, model=None):
+    def __init__(self, span, model=None):
         self.resolution = int(24*8)
         self.timeSpreadPast = int(24*8)
-        self.modelPath = "cnnmodel.h5"
+        self.span = span
+        self.modelPath = f"cnnmodel{span}.h5"
         if model is None:
             self.model = self.__buildModel()
             self.isModelLoaded = False
@@ -35,8 +36,7 @@ class CNNAI():
         else:
             os.mkdir(dirName)
         # get labeled span data
-        span = '15MIN'
-        path = f'{dirName}/{span}/labeledData.csv'
+        path = f'{dirName}/{self.span}/labeledData.csv'
         data = pd.read_csv(path).dropna().reset_index(drop=True)
         # latest data is unstable, should be dropped.
         data = data.drop(data.index[-self.timeSpreadPast:])
@@ -51,7 +51,7 @@ class CNNAI():
             dateString = data.loc[i, 'Date']
             # print(f'data[{i}] = {data.loc[i]}')
             graphName = dateString.split('.')[0].replace('T', '_').replace(':', '-')
-            _graphData = pd.read_csv(f'{dirName}/{span}/graphData/{graphName}.csv', index_col=0)
+            _graphData = pd.read_csv(f'{dirName}/{self.span}/graphData/{graphName}.csv', index_col=0)
             graphData[i, :, :] = _graphData.values.reshape(self.timeSpreadPast, self.resolution)
             # print(f'{i} of {graphAmount}')
         graphData = graphData.reshape(graphAmount, self.timeSpreadPast, self.resolution, 1)
@@ -77,10 +77,10 @@ class CNNAI():
         print(f'Model training ends with accuracy {accuracy}. (time cost: {timeCost} seconds)')
 
 
-    def showModelBreviation(self, graphDataDir, span='15MIN'):
+    def showModelBreviation(self, graphDataDir):
         # get valid model
         self.__checkAndHandleLoadingModel()
-        data = pd.read_csv('./LabeledData/{span}/labeledData.csv')
+        data = pd.read_csv('./LabeledData/{self.span}/labeledData.csv')
         # set target time
         # targetTime = dt.datetime(2020, 7, 23, 0, 0, 0)
         targetTime = stringToDate(data.loc[data.index.values.shape[0]-1, 'Date'])
