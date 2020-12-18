@@ -461,7 +461,7 @@ def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, reso
         determinantPriceOfDropping = currentClosePrice * (1 - determinantPriceDiversityPercentage)
         # label 15MINData
         # get future average price from now to now+timeSpreadFuture
-        if t+timeSpreadFuture in data15MIN.index:
+        if t+timeSpreadFuture in data15MIN.index.values:
             futureAverage = 0
             for futureT in range(t+1, t+1+timeSpreadFuture):
                 _futurePricesInFutureT = nu.linspace(data15MIN.loc[futureT, 'Low'], data15MIN.loc[futureT, 'High'], pointsPerCandle)
@@ -476,7 +476,7 @@ def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, reso
             else: # level
                 data15MIN.loc[t, 'LabelCNNPost1'] = 1
         # draw past graph from now-timeSpreadPast+1 to now
-        if t+1-timeSpreadPast in data15MIN.index:
+        if t+1-timeSpreadPast in data15MIN.index.values:
             targetIndices = range(t+1-timeSpreadPast, t+1)
             top = data15MIN.loc[targetIndices, 'High'].max()
             down = data15MIN.loc[targetIndices, 'Low'].min()
@@ -494,16 +494,9 @@ def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, reso
         # get future average price from now to now+timeSpreadFuture_1hour
         currentHourRoundedTime = dt.datetime(currentTime.year, currentTime.month, currentTime.day, currentTime.hour, 0, 0)
         t_1hour = data1HOUR.loc[data1HOUR['DateTypeDate'] == currentHourRoundedTime].index[0]
-        print(f't_1hour = {t_1hour}')
-        # t_1hour = data1HOUR.index[data1HOUR['DateTypeDate'] == currentHourRoundedTime]
-        try:
-            t_1hour_interpolated = data1HOUR_interpolated.loc[data1HOUR_interpolated['DateTypeDate'] == currentTime].index[0]
-            print(f't_1hour_interpolated = {t_1hour_interpolated}')
-        except IndexError as e:
-            print(f'{currentTime} is not in data1HOUR_interpolated')
-            exit()
+        t_1hour_interpolated = data1HOUR_interpolated.loc[data1HOUR_interpolated['DateTypeDate'] == currentTime].index[0]
         # t_1hour_interpolated = data1HOUR_interpolated.index[data1HOUR_interpolated['DateTypeDate'] == currentTime]
-        if t_1hour+(timeSpreadFuture+1) in data1HOUR.index:
+        if t_1hour+(timeSpreadFuture+1) in data1HOUR.index.values:
             futureAverage = 0
             for futureT in range(t_1hour+1, t_1hour+1+timeSpreadFuture):
                 _futurePricesInFutureT = nu.linspace(data1HOUR.loc[futureT, 'Low'], data1HOUR.loc[futureT, 'High'], pointsPerCandle)
@@ -518,7 +511,7 @@ def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, reso
             else: # level
                 data1HOUR.loc[t_1hour, 'LabelCNNPost1'] = 1
         # draw past graph from now-timeSpreadPast+1 to now
-        if t_1hour+1-timeSpreadPast in data1HOUR.index:
+        if t_1hour+1-timeSpreadPast in data1HOUR.index.values:
             targetIndicesInFull1HOURData = range(t_1hour+1-timeSpreadPast, t_1hour)
             top = data1HOUR.loc[targetIndicesInFull1HOURData, 'High'].max()
             top = max(top, data1HOUR_interpolated.loc[t_1hour_interpolated, 'High'])
@@ -576,7 +569,7 @@ def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, reso
     del data1HOUR['DateTypeDate']
     data1HOUR.to_csv('./LabeledData/1HOUR/labeledData.csv', index=False, header=True)
     del data1HOUR_interpolated['DateTypeDate']
-    data1HOUR_interpolated.to_csv('./LabeledData/1HOUR/interpolatedData.csv', index=False, header=True)
+    data1HOUR_interpolated.to_csv('./LabeledData/1HOUR/labeledData_interpolated.csv', index=False, header=True)
     return
 
 
