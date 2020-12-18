@@ -165,6 +165,7 @@ class PreprocessingWorker():
             # calculate graphData and update label
             # data = generateGraphDataAndLabel(data=data, ts=data.index.values.ravel(), resolution=resolution, timeSpreadPast=int(timeSpreadPast), timeSpreadFuture=int(timeSpreadFuture), graphDataDir=graphDataDir)
             data.to_csv(storedFilePath, index=False, header=True)
+            print('data15MIN saved.')
 
 
         # 1HOUR Data (normal)
