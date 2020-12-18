@@ -222,7 +222,7 @@ class PreprocessingWorker():
             # data1HOUR.to_csv(storedFilePath, index=False, header=True)
 
         else: # don't have start Date
-            data = None
+            data1HOUR = None
             # fetch new data
             for name, date in fileNames:
                 new15minData = pd.read_csv(f'{dirName}/{name}')
@@ -359,7 +359,7 @@ class PreprocessingWorker():
             # del data1HOUR_interpolated['DateTypeDate']
             # data1HOUR_interpolated.to_csv(storedFilePath, index=False, header=True)
         # calculate graphData and update label
-        generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, resolution, timeSpreadPast, timeSpreadFuture=timeSpreadPast//2)
+        generateGraphDataAndLabel(data, data1HOUR, data1HOUR_interpolated, resolution, timeSpreadPast, timeSpreadFuture=timeSpreadPast//2)
         # calcuate time
         timeCost = (dt.datetime.now() - _start).total_seconds()
         print(f'History data preprocessing done with time cost: {timeCost} seconds')
