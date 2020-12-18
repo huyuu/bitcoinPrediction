@@ -495,8 +495,12 @@ def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, reso
         t_1hour = data1HOUR.loc[data1HOUR['DateTypeDate'] == currentHourRoundedTime].index[0]
         print(f't_1hour = {t_1hour}')
         # t_1hour = data1HOUR.index[data1HOUR['DateTypeDate'] == currentHourRoundedTime]
-        t_1hour_interpolated = data1HOUR_interpolated.loc[data1HOUR_interpolated['DateTypeDate'] == currentTime].index[0]
-        print(f't_1hour_interpolated = {t_1hour_interpolated}')
+        try:
+            t_1hour_interpolated = data1HOUR_interpolated.loc[data1HOUR_interpolated['DateTypeDate'] == currentTime].index[0]
+            print(f't_1hour_interpolated = {t_1hour_interpolated}')
+        except IndexError as e:
+            print(f'{currentTime} is not in data1HOUR_interpolated')
+            exit()
         # t_1hour_interpolated = data1HOUR_interpolated.index[data1HOUR_interpolated['DateTypeDate'] == currentTime]
         if t_1hour+(timeSpreadFuture+1) in data1HOUR.index:
             futureAverage = 0
