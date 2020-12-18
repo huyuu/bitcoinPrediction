@@ -181,7 +181,7 @@ class PreprocessingWorker():
             for name, date in filteredFileNames:
                 new15minData = pd.read_csv(f'{dirName}/{name}')
                 # drop last row
-                new15minData = newData.drop(newData.index[[-1]])
+                new15minData = new15minData.drop(new15minData.index[[-1]])
                 new15minData['DateTypeDate'] = stringToDate(new15minData['Date'].values.ravel())
                 # dump 15minData into 1HourData
                 hourRoundedDate = dt.datetime(date.year, date.month, date.day, date.hour, 0, 0)
@@ -275,7 +275,7 @@ class PreprocessingWorker():
             for name, date in filteredFileNames:
                 new15minData = pd.read_csv(f'{dirName}/{name}')
                 # drop last row
-                new15minData = newData.drop(newData.index[[-1]])
+                new15minData = new15minData.drop(new15minData.index[[-1]])
                 new15minData['DateTypeDate'] = stringToDate(new15minData['Date'].values.ravel())
                 # dump 15minData into 1HourData
                 hourRoundedDate = dt.datetime(date.year, date.month, date.day, date.hour, 0, 0)
@@ -292,7 +292,7 @@ class PreprocessingWorker():
                         #
                         newHourData.loc[lastIndex, 'Open'] = newHourData.loc[previousIndex, 'Open']
                         newHourData.loc[lastIndex, 'time_open'] = newHourData.loc[previousIndex, 'time_open']
-                        newHourData.loc[lastIndex, 'time_period_start'] = dt.datetime(hourRoundedDate.year, hourRoundedDate.month, hourRoundedDate.day, hourRoundedDate.hour, 0, 0)
+                        newHourData.loc[lastIndex, 'time_period_start'] = dateToString(hourRoundedDate)
                         newHourData.loc[lastIndex, 'time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
                         # adjust High & Low
                         newHourData.loc[lastIndex, 'High'] = max(newHourData.loc[previousIndex, 'High'], newHourData.loc[lastIndex, 'High'])
@@ -303,7 +303,7 @@ class PreprocessingWorker():
                         newHourData = newHourData.append(new15minData.loc[row], ignore_index=True)
                         lastIndex = newHourData.index[-1]
                         newHourData.loc[lastIndex, 'time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
-                        newHourData.loc[lastIndex, 'time_period_start'] = dt.datetime(hourRoundedDate.year, hourRoundedDate.month, hourRoundedDate.day, hourRoundedDate.hour, 0, 0)
+                        newHourData.loc[lastIndex, 'time_period_start'] = dateToString(hourRoundedDate)
                 # get the specific row of the old data to insert into
                 rowIndex = data1HOUR_interpolated.loc[data1HOUR_interpolated['Date'] == dateToString(date)].index.values
                 if rowIndex.shape[0] != 0: # if rowIndex exists
@@ -336,6 +336,7 @@ class PreprocessingWorker():
                 # drop all the rows except the first
                 newHourData = newHourData.drop(newHourData.index[1:])
                 # update the first row's time_period_end to the start of the next hour
+                newHourData.loc[0, 'time_period_start'] = dateToString(hourRoundedDate)
                 newHourData.loc[0, 'time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
                 for row in new15minData.index[1:]:
                     # if the row is not hourRounded
@@ -346,7 +347,7 @@ class PreprocessingWorker():
                         #
                         newHourData.loc[lastIndex, 'Open'] = newHourData.loc[previousIndex, 'Open']
                         newHourData.loc[lastIndex, 'time_open'] = newHourData.loc[previousIndex, 'time_open']
-                        newHourData.loc[lastIndex, 'time_period_start'] = dt.datetime(hourRoundedDate.year, hourRoundedDate.month, hourRoundedDate.day, hourRoundedDate.hour, 0, 0)
+                        newHourData.loc[lastIndex, 'time_period_start'] = ddateToString(hourRoundedDate)
                         newHourData.loc[lastIndex, 'time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
                         # adjust High & Low
                         newHourData.loc[lastIndex, 'High'] = max(newHourData.loc[previousIndex, 'High'], newHourData.loc[lastIndex, 'High'])
@@ -357,7 +358,7 @@ class PreprocessingWorker():
                         newHourData = newHourData.append(new15minData.loc[row], ignore_index=True)
                         lastIndex = newHourData.index[-1]
                         newHourData.loc[lastIndex, 'time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
-                        newHourData.loc[lastIndex, 'time_period_start'] = dt.datetime(hourRoundedDate.year, hourRoundedDate.month, hourRoundedDate.day, hourRoundedDate.hour, 0, 0)
+                        newHourData.loc[lastIndex, 'time_period_start'] = dateToString(hourRoundedDate)
                 # for the 1st time we copy newHourData, otherwise we concatenate them
                 data1HOUR_interpolated = newHourData.copy() if data1HOUR_interpolated is None else pd.concat([data1HOUR_interpolated, newHourData])
             data1HOUR_interpolated = data1HOUR_interpolated.drop(['Volume', 'trades_count'], axis=1).dropna().reset_index(drop=True)
