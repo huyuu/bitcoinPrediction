@@ -54,11 +54,12 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         self.imageWidth = imageWidth
         self.imageHeight = imageHeight
 
-        self.data = pd.read_csv(f'./LabeledData/{span}/labeledData.csv').dropna(axis=1)
-        self.data['DateTypeDate'] = stringToDate(self.data['Date'].values.ravel())
-        self.possibleStartDate = [ pd.Timestamp(nu_date).to_pydatetime() for nu_date in self.data.iloc[:-int(4*24*31*3), :].loc[:, 'DateTypeDate'].values.ravel() ]
+        self.data15MIN = pd.read_csv(f'./LabeledData/15MIN/labeledData.csv').dropna(axis=1)
+        self.data15MIN['DateTypeDate'] = stringToDate(self.data15MIN['Date'].values.ravel())
+        self.possibleStartDate = [ pd.Timestamp(nu_date).to_pydatetime() for nu_date in self.data15MIN.iloc[:-int(4*24*31*3), :].loc[:, 'DateTypeDate'].values.ravel() ]
         startDate = nu.random.choice(self.possibleStartDate)
         self.currentDate = dt.datetime(startDate.year, startDate.month, startDate.day, startDate.hour, (startDate.minute//15)*15, 0)
+
 
         self.episodeCount = 0#
         self.episodeEndSteps = 1*7*24*4  # 1week * 7days/week * 24hours/day * 4quater/hour
