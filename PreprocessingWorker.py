@@ -455,6 +455,9 @@ def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, reso
     for t in data15MIN.index[1:]:
         currentClosePrice = data15MIN.loc[t, 'Close']
         currentTime = data15MIN.loc[t, 'DateTypeDate']
+        # decide price of growing and dropping
+        determinantPriceOfGrowing = currentClosePrice * (1 + determinantPriceDiversityPercentage)
+        determinantPriceOfDropping = currentClosePrice * (1 - determinantPriceDiversityPercentage)
         # label 15MINData
         # get future average price from now to now+timeSpreadFuture
         if t+timeSpreadFuture in data15MIN.index:
@@ -464,9 +467,6 @@ def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, reso
                 for _futurePrice in _futurePricesInFutureT:
                     futureAverage += _futurePrice
             futureAverage /= float(pointsPerCandle*timeSpreadFuture)
-            # decide price of growing and dropping
-            determinantPriceOfGrowing = currentClosePrice * (1 + determinantPriceDiversityPercentage)
-            determinantPriceOfDropping = currentClosePrice * (1 - determinantPriceDiversityPercentage)
             # labeling
             if futureAverage >= determinantPriceOfGrowing: # growing
                 data15MIN.loc[t, 'LabelCNNPost1'] = 2
