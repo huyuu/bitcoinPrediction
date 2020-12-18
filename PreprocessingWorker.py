@@ -201,7 +201,8 @@ class PreprocessingWorker():
                         newHourData.loc[lastIndex, 'time_close'] = new15minData.loc[row, 'time_close']
                     # should create new row for the next hour
                     else:
-                        hourRoundedDate += dt.timedelta(hours=1)
+                        hourRoundedDate = new15minData.loc[row, 'DateTypeDate']
+                        hourRoundedDate = dt.datetime(hourRoundedDate.year, hourRoundedDate.month, hourRoundedDate.day, hourRoundedDate.hour, 0, 0)
                         newHourData = newHourData.append(new15minData.loc[row], ignore_index=True)
                         lastIndex = newHourData.index[-1]
                         newHourData.loc[lastIndex, 'time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
@@ -251,7 +252,8 @@ class PreprocessingWorker():
                         newHourData.loc[lastIndex, 'time_close'] = new15minData.loc[row, 'time_close']
                     # should create new row for the next hour
                     else:
-                        hourRoundedDate += dt.timedelta(hours=1)
+                        hourRoundedDate = new15minData.loc[row, 'DateTypeDate']
+                        hourRoundedDate = dt.datetime(hourRoundedDate.year, hourRoundedDate.month, hourRoundedDate.day, hourRoundedDate.hour, 0, 0)
                         newHourData = newHourData.append(new15minData.loc[row], ignore_index=True)
                         lastIndex = newHourData.index[-1]
                         newHourData.loc[lastIndex, 'time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
@@ -300,7 +302,8 @@ class PreprocessingWorker():
                         newHourData.loc[lastIndex, 'Low'] = min(newHourData.loc[previousIndex, 'Low'], newHourData.loc[lastIndex, 'Low'])
                     # should create new row for the next hour
                     else:
-                        hourRoundedDate += dt.timedelta(hours=1)
+                        hourRoundedDate = new15minData.loc[row, 'DateTypeDate']
+                        hourRoundedDate = dt.datetime(hourRoundedDate.year, hourRoundedDate.month, hourRoundedDate.day, hourRoundedDate.hour, 0, 0)
                         newHourData = newHourData.append(new15minData.loc[row], ignore_index=True)
                         lastIndex = newHourData.index[-1]
                         newHourData.loc[lastIndex, 'time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
@@ -355,7 +358,8 @@ class PreprocessingWorker():
                         newHourData.loc[lastIndex, 'Low'] = min(newHourData.loc[previousIndex, 'Low'], newHourData.loc[lastIndex, 'Low'])
                     # should create new row for the next hour
                     else:
-                        hourRoundedDate += dt.timedelta(hours=1)
+                        hourRoundedDate = new15minData.loc[row, 'DateTypeDate']
+                        hourRoundedDate = dt.datetime(hourRoundedDate.year, hourRoundedDate.month, hourRoundedDate.day, hourRoundedDate.hour, 0, 0)
                         newHourData = newHourData.append(new15minData.loc[row], ignore_index=True)
                         lastIndex = newHourData.index[-1]
                         newHourData.loc[lastIndex, 'time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
