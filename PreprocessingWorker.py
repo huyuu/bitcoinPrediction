@@ -543,7 +543,7 @@ def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, reso
             graphArray[-1, :] = nu.array([ True if _lowerBound <= value <= _upperBound else False for value in topDownArray ]) * 1
             # save
             graphData = pd.DataFrame(graphArray.T, index=topDownArray, columns=data1HOUR.loc[range(t_1hour+1-timeSpreadPast, t_1hour+1), 'Date'])
-            graphName = data1HOUR.loc[t, 'Date'].split('.')[0].replace('T', '_').replace(':', '-')
+            graphName = data1HOUR_interpolated.loc[t_1hour_interpolated, 'Date'].split('.')[0].replace('T', '_').replace(':', '-')
             graphData.to_csv(f'./LabeledData/1HOUR/graphData/{graphName}.csv', index=True, header=True)
     # for t in ts:
     #     # if data down to -timeSpreadPast is not available, skip drawing graph.
