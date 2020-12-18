@@ -155,6 +155,7 @@ class PreprocessingWorker():
             name, date = fileNames[0]
             data = pd.read_csv(f'{dirName}/{name}')
             data['DateTypeDate'] = stringToDate(data['Date'].values.ravel())
+            print(f'start processing data15MIN from {len(fileNames)} files.')
             for name, date in fileNames[1:]:
                 _newData = pd.read_csv(f'{dirName}/{name}')
                 _newData = _newData.drop(_newData.index[[-1]])
