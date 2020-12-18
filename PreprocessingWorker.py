@@ -486,11 +486,13 @@ def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, reso
         # label 1HOURData
         # get future average price from now to now+timeSpreadFuture_1hour
         currentHourRoundedTime = dt.datetime(currentTime.year, currentTime.month, currentTime.day, currentTime.hour, 0, 0)
-        t_1hour = data1HOUR.loc[data1HOUR['DateTypeDate'] == currentHourRoundedTime].index.values
+        t_1hour = data1HOUR.loc[data1HOUR['DateTypeDate'] == currentHourRoundedTime].index[0]
+        print('t_1hour = {t_1hour}')
         # t_1hour = data1HOUR.index[data1HOUR['DateTypeDate'] == currentHourRoundedTime]
-        t_1hour_interpolated = data1HOUR_interpolated.loc[data1HOUR_interpolated['DateTypeDate'] == currentTime].index.values
+        t_1hour_interpolated = data1HOUR_interpolated.loc[data1HOUR_interpolated['DateTypeDate'] == currentTime].index[0]
+        print('t_1hour_interpolated = {t_1hour_interpolated}')
         # t_1hour_interpolated = data1HOUR_interpolated.index[data1HOUR_interpolated['DateTypeDate'] == currentTime]
-        if t_1hour+(timeSpreadFuture+1) in data1HOUR.index.values:
+        if t_1hour+(timeSpreadFuture+1) in data1HOUR.index:
             futureAverage = 0
             for futureT in range(t_1hour+1, t_1hour+1+timeSpreadFuture):
                 _futurePricesInFutureT = nu.linspace(data1HOUR.loc[futureT, 'Low'], data1HOUR.loc[futureT, 'High'], pointsPerCandle)
@@ -505,7 +507,7 @@ def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, reso
             else: # level
                 data1HOUR.loc[t_1hour, 'LabelCNNPost1'] = 1
         # draw past graph from now-timeSpreadPast+1 to now
-        if t_1hour+1-timeSpreadPast in data1HOUR.index.values:
+        if t_1hour+1-timeSpreadPast in data1HOUR.index:
             targetIndicesInFull1HOURData = range(t_1hour+1-timeSpreadPast, t_1hour)
             top = data1HOUR.loc[targetIndicesInFull1HOURData, 'High'].max()
             top = max(top, data1HOUR_interpolated.loc[t_1hour_interpolated, 'High'])
