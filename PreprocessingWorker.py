@@ -240,7 +240,7 @@ class PreprocessingWorker():
                 newHourData = newHourData.drop(newHourData.index[1:])
                 # update the first row's time_period_end to the start of the next hour
                 newHourData.loc[0, 'time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
-                newHourData.loc[0, 'time_period_start'] = dateToString(hourRoundedDate)
+                newHourData.loc[0, 'DateTypeDate'] = hourRoundedDate
                 for row in new15minData.index[1:]:
                     # if the row is within 1hour since last, dump it into the row
                     if new15minData.loc[row, 'DateTypeDate'].year == hourRoundedDate.year and new15minData.loc[row, 'DateTypeDate'].month == hourRoundedDate.month and new15minData.loc[row, 'DateTypeDate'].day == hourRoundedDate.day and new15minData.loc[row, 'DateTypeDate'].hour == hourRoundedDate.hour:
@@ -257,6 +257,7 @@ class PreprocessingWorker():
                         newHourData = newHourData.append(new15minData.loc[row], ignore_index=True)
                         lastIndex = newHourData.index[-1]
                         newHourData.loc[lastIndex, 'time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
+                        newHourData.loc[lastIndex, 'DateTypeDate'] = hourRoundedDate
                 # for the 1st time we copy newHourData, otherwise we concatenate them
                 data1HOUR = newHourData.copy() if data1HOUR is None else pd.concat([data1HOUR, newHourData])
             data1HOUR = data1HOUR.drop(['Volume', 'trades_count'], axis=1).dropna().reset_index(drop=True)
