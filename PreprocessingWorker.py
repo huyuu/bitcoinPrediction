@@ -342,7 +342,7 @@ class PreprocessingWorker():
                     if new15minData.loc[row, 'DateTypeDate'].hour == hourRoundedDate.hour:
                         newHourData = newHourData.append(new15minData.loc[row], ignore_index=True)
                         lastIndex = newHourData.index[-1]
-                        previousIndex = newHourData.indx[-2]
+                        previousIndex = newHourData.index[-2]
                         #
                         newHourData.loc[lastIndex, 'Open'] = newHourData.loc[previousIndex, 'Open']
                         newHourData.loc[lastIndex, 'time_open'] = newHourData.loc[previousIndex, 'time_open']
