@@ -338,20 +338,26 @@ class PreprocessingWorker():
                 # update the first row's time_period_end to the start of the next hour
                 newHourData.loc[0, 'time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
                 for row in new15minData.index[1:]:
-                    # if the row is within 1hour since last, dump it into the row
+                    # if the row is not hourRounded
                     if new15minData.loc[row, 'DateTypeDate'].hour == hourRoundedDate.hour:
+                        newHourData = newHourData.append(new15minData.loc[row], ignore_index=True)
                         lastIndex = newHourData.index[-1]
-                        newHourData.loc[lastIndex, 'High'] = max(newHourData.loc[lastIndex, 'High'], new15minData.loc[row, 'High'])
-                        newHourData.loc[lastIndex, 'Low'] = min(newHourData.loc[lastIndex, 'Low'], new15minData.loc[row, 'Low'])
-                        # only for the last one. For convenience, we propose it for all
-                        newHourData.loc[lastIndex, 'Close'] = new15minData.loc[row, 'Close']
-                        newHourData.loc[lastIndex, 'time_close'] = new15minData.loc[row, 'time_close']
+                        previousIndex = newHourData.indx[-2]
+                        #
+                        newHourData.loc[lastIndex, 'Open'] = newHourData.loc[previousIndex, 'Open']
+                        newHourData.loc[lastIndex, 'time_open'] = newHourData.loc[previousIndex, 'time_open']
+                        newHourData.loc[lastIndex, 'time_period_start'] = dt.datetime(hourRoundedDate.year, hourRoundedDate.month, hourRoundedDate.day, hourRoundedDate.hour, 0, 0)
+                        newHourData.loc[lastIndex, 'time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
+                        # adjust High & Low
+                        newHourData.loc[lastIndex, 'High'] = max(newHourData.loc[previousIndex, 'High'], newHourData.loc[lastIndex, 'High'])
+                        newHourData.loc[lastIndex, 'Low'] = min(newHourData.loc[previousIndex, 'Low'], newHourData.loc[lastIndex, 'Low'])
                     # should create new row for the next hour
                     else:
                         hourRoundedDate += dt.timedelta(hours=1)
                         newHourData = newHourData.append(new15minData.loc[row], ignore_index=True)
                         lastIndex = newHourData.index[-1]
                         newHourData.loc[lastIndex, 'time_period_end'] = dateToString(hourRoundedDate + dt.timedelta(hours=1))
+                        newHourData.loc[lastIndex, 'time_period_start'] = dt.datetime(hourRoundedDate.year, hourRoundedDate.month, hourRoundedDate.day, hourRoundedDate.hour, 0, 0)
                 # for the 1st time we copy newHourData, otherwise we concatenate them
                 data1HOUR_interpolated = newHourData.copy() if data1HOUR_interpolated is None else pd.concat([data1HOUR_interpolated, newHourData])
             data1HOUR_interpolated = data1HOUR_interpolated.drop(['Volume', 'trades_count'], axis=1).dropna().reset_index(drop=True)
