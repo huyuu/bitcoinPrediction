@@ -486,8 +486,10 @@ def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, reso
         # label 1HOURData
         # get future average price from now to now+timeSpreadFuture_1hour
         currentHourRoundedTime = dt.datetime(currentTime.year, currentTime.month, currentTime.day, currentTime.hour, 0, 0)
-        t_1hour = data1HOUR.index[data1HOUR['DateTypeDate'] == currentHourRoundedTime]
-        t_1hour_interpolated = data1HOUR_interpolated.index[data1HOUR_interpolated['DateTypeDate'] == currentTime]
+        t_1hour = data1HOUR.loc[data1HOUR['DateTypeDate'] == currentHourRoundedTime].index
+        # t_1hour = data1HOUR.index[data1HOUR['DateTypeDate'] == currentHourRoundedTime]
+        t_1hour_interpolated = data1HOUR_interpolated.loc[data1HOUR_interpolated['DateTypeDate'] == currentTime].index
+        # t_1hour_interpolated = data1HOUR_interpolated.index[data1HOUR_interpolated['DateTypeDate'] == currentTime]
         if t_1hour+(timeSpreadFuture+1) in data1HOUR.index:
             futureAverage = 0
             for futureT in range(t_1hour+1, t_1hour+1+timeSpreadFuture):
@@ -524,29 +526,6 @@ def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, reso
             graphData = pd.DataFrame(graphArray.T, index=topDownArray, columns=data1HOUR.loc[range(t_1hour+1-timeSpreadPast, t_1hour+1), 'Date'])
             graphName = data1HOUR.loc[t, 'Date'].split('.')[0].replace('T', '_').replace(':', '-')
             graphData.to_csv(f'./LabeledData/1HOUR/graphData/{graphName}.csv', index=True, header=True)
-
-        # # label 4HOURData
-        # # get future average price from now to now+timeSpreadFuture_4hour
-        # current4HourRoundedTime = dt.datetime(currentTime.year, currentTime.month, currentTime.day, currentTime.hour//4*4, 0, 0)
-        # t_4hour = data4HOUR.index[data4HOUR['DateTypeDate'] == current4HourRoundedTime]
-        # if t_4hour+(timeSpreadFuture+1) in data4HOUR.index:
-        #     futureAverage = 0
-        #     for futureT in range(t_4hour+1, t_4hour+1+timeSpreadFuture):
-        #         _futurePricesInFutureT = nu.linspace(data4HOUR.loc[futureT, 'Low'], data4HOUR.loc[futureT, 'High'], pointsPerCandle)
-        #         for _futurePrice in _futurePricesInFutureT:
-        #             futureAverage += _futurePrice
-        #     futureAverage /= float(pointsPerCandle*timeSpreadFuture)
-        #     # labeling
-        #     if futureAverage >= determinantPriceOfGrowing: # growing
-        #         data4HOUR.loc[t_4hour, 'LabelCNNPost1'] = 2
-        #     elif futureAverage <= determinantPriceOfDropping: # dropping
-        #         data4HOUR.loc[t_4hour, 'LabelCNNPost1'] = 0
-        #     else: # level
-        #         data4HOUR.loc[t_4hour, 'LabelCNNPost1'] = 1
-
-
-
-
     # for t in ts:
     #     # if data down to -timeSpreadPast is not available, skip drawing graph.
     #     if not t+1-timeSpreadPast in data.index.values:
