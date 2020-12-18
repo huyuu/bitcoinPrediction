@@ -527,8 +527,8 @@ def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, reso
                 _upperBound = data1HOUR.loc[_t, 'High']
                 graphArray[i, :] = nu.array([ True if _lowerBound <= value <= _upperBound else False for value in topDownArray ]) * 1
             # create 1 hour data interpolated
-            _lowerBound = data1HOUR_interpolated[t_1hour_interpolated, 'Low']
-            _upperBound = data1HOUR_interpolated[t_1hour_interpolated, 'High']
+            _lowerBound = data1HOUR_interpolated.loc[t_1hour_interpolated, 'Low']
+            _upperBound = data1HOUR_interpolated.loc[t_1hour_interpolated, 'High']
             graphArray[-1, :] = nu.array([ True if _lowerBound <= value <= _upperBound else False for value in topDownArray ]) * 1
             # save
             graphData = pd.DataFrame(graphArray.T, index=topDownArray, columns=data1HOUR.loc[range(t_1hour+1-timeSpreadPast, t_1hour+1), 'Date'])
