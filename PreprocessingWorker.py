@@ -454,7 +454,6 @@ class PreprocessingWorker():
 
 def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, resolution, timeSpreadPast, timeSpreadFuture, pointsPerCandle=10, determinantPriceDiversityPercentage=0.05):
     # for t in data15MIN.index[timeSpreadPast+1: -timeSpreadFuture]:
-    print(f'data15MIN = {data15MIN}')
     for t in data15MIN.index[1:]:
         currentClosePrice = data15MIN.loc[t, 'Close']
         currentTime = data15MIN.loc[t, 'DateTypeDate']
@@ -495,8 +494,16 @@ def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, reso
         # label 1HOURData
         # get future average price from now to now+timeSpreadFuture_1hour
         currentHourRoundedTime = dt.datetime(currentTime.year, currentTime.month, currentTime.day, currentTime.hour, 0, 0)
-        t_1hour = data1HOUR.loc[data1HOUR['DateTypeDate'] == currentHourRoundedTime].index[0]
-        t_1hour_interpolated = data1HOUR_interpolated.loc[data1HOUR_interpolated['DateTypeDate'] == currentTime].index[0]
+        try:
+            t_1hour = data1HOUR.loc[data1HOUR['DateTypeDate'] == currentHourRoundedTime].index[0]
+        except IndexError as e:
+            print(f'{currentHourRoundedTime} is not in data1HOUR')
+            exit()
+        try:
+            t_1hour_interpolated = data1HOUR_interpolated.loc[data1HOUR_interpolated['DateTypeDate'] == currentTime].index[0]
+        except:
+            print(f'{currentTime} is not in data1HOUR_interpolated')
+            exit()
         # t_1hour_interpolated = data1HOUR_interpolated.index[data1HOUR_interpolated['DateTypeDate'] == currentTime]
         if t_1hour+(timeSpreadFuture+1) in data1HOUR.index.values:
             futureAverage = 0
