@@ -486,11 +486,11 @@ def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, reso
         # label 1HOURData
         # get future average price from now to now+timeSpreadFuture_1hour
         currentHourRoundedTime = dt.datetime(currentTime.year, currentTime.month, currentTime.day, currentTime.hour, 0, 0)
-        t_1hour = data1HOUR.loc[data1HOUR['DateTypeDate'] == currentHourRoundedTime].index[0]
-        print('t_1hour = {t_1hour}')
+        t_1hour = data1HOUR.loc[data1HOUR['DateTypeDate'] == currentHourRoundedTime].index
+        print(f't_1hour = {t_1hour}')
         # t_1hour = data1HOUR.index[data1HOUR['DateTypeDate'] == currentHourRoundedTime]
-        t_1hour_interpolated = data1HOUR_interpolated.loc[data1HOUR_interpolated['DateTypeDate'] == currentTime].index[0]
-        print('t_1hour_interpolated = {t_1hour_interpolated}')
+        t_1hour_interpolated = data1HOUR_interpolated.loc[data1HOUR_interpolated['DateTypeDate'] == currentTime].index
+        print(f't_1hour_interpolated = {t_1hour_interpolated}')
         # t_1hour_interpolated = data1HOUR_interpolated.index[data1HOUR_interpolated['DateTypeDate'] == currentTime]
         if t_1hour+(timeSpreadFuture+1) in data1HOUR.index:
             futureAverage = 0
