@@ -78,24 +78,18 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             self.graphData = None
         self.shouldGiveRewardsFinally = shouldGiveRewardsFinally
         self.gamma = gamma
-        # set model of 15MIN
-        modelPath = 'cnnmodel15MIN.h5'
-        if os.path.exists(modelPath):
-            model = tf.keras.models.load_model(modelPath)
-            self.cnnAI15MIN = CNNAI(span='15MIN', model=model)
-        else:
-            print("Model not given, start training ...")
-            self.cnnAI15MIN = CNNAI(span='15MIN', model=None)
-            self.cnnAI15MIN.train()
-        # set model of 1HOUR
-        modelPath = 'cnnmodel1HOUR.h5'
-        if os.path.exists(modelPath):
-            model = tf.keras.models.load_model(modelPath)
-            self.cnnAI1HOUR = CNNAI(span='1HOUR', model=model)
-        else:
-            print("Model not given, start training ...")
-            self.cnnAI1HOUR = CNNAI(span='1HOUR', model=None)
-            self.cnnAI1HOUR.train()
+        # set cnnAIs
+        self.cnnAIs = {}
+        for span in ['15MIN', '1HOUR']:
+            # set model of 15MIN / 1HOUR
+            modelPath = f'cnnmodel{span}.h5'
+            if os.path.exists(modelPath):
+                model = tf.keras.models.load_model(modelPath)
+                self.cnnAIs[span] = CNNAI(span=span, model=model)
+            else:
+                print(f"{span} model not given, start training ...")
+                self.cnnAIs[span] = CNNAI(span=span, model=None)
+                self.cnnAIs[span].train()
 
 
     # required
@@ -114,32 +108,36 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         self.holdingJPY = self.initialAsset
         self.holdingRate = 0.0
         self.currentPrice = 0.0
+        # loop in spans
+        self.currentState = nu.array([], dtype=self.dtype)
         for span in ['15IN', '1HOUR']:
-        # get available current date
-        _graphDir = f'./LabeledData/{span}/graphData'
-        while True:
-            self.currentDate = nu.random.choice(self.possibleStartDate)
-            _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
-            if os.path.exists(_graphPath):
-                break
+            # get available current date
+            _graphDir = f'./LabeledData/{span}/graphData'
+            while True:
+                self.currentDate = nu.random.choice(self.possibleStartDate)
+                _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
+                if os.path.exists(_graphPath):
+                    break
+                else:
+                    continue
+            # get next market snapshot
+            if self.isHugeMemorryMode:
+                _graphPath = self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
+                marketSnapshot = self.graphData[f'{_graphPath}']
             else:
-                continue
-        # get next market snapshot
-        if self.isHugeMemorryMode:
-            _graphPath = self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
-            marketSnapshot = self.graphData[f'{_graphPath}']
-        else:
-            _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
-            marketSnapshot = pd.read_csv(_graphPath, index_col=0).values
-        marketSnapshot = marketSnapshot.astype(self.dtype)
-        predictedProbabilities = self.cnnAI15MIN.predictFromCurrentGraphData(data=marketSnapshot, now=self.currentDate, shouldSaveGraph=False)
+                _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
+                marketSnapshot = pd.read_csv(_graphPath, index_col=0).values
+            marketSnapshot = marketSnapshot.astype(self.dtype)
+            predictedProbabilities = self.cnnAIs[span].predictFromCurrentGraphData(data=marketSnapshot, now=self.currentDate, shouldSaveGraph=False)
+            self.currentState = nu.concatenate([self.currentState, predictedProbabilities.ravel()])
         # self.currentState = nu.append(marketSnapshot, self.holdingRate)
         # self.currentState = (marketSnapshot, nu.array([self.holdingRate], dtype=self.dtype))
         # self.currentState = {
         #     'observation_predictedCategory': predictedCategory,
         #     'observation_holdingRate': nu.array([self.holdingRate], dtype=self.dtype)
         # }
-        self.currentState = nu.array([predictedProbabilities[0], predictedProbabilities[1], predictedProbabilities[2], self.holdingRate], dtype=self.dtype)
+        # self.currentState = nu.array([predictedProbabilities[0], predictedProbabilities[1], predictedProbabilities[2], self.holdingRate], dtype=self.dtype)
+        self.currentState = nu.concatenate([self.currentState, self.holdingRate])
         self.episodeCount = 0
         return ts.restart(self.currentState)
 
