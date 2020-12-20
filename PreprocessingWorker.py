@@ -7,6 +7,7 @@ import os
 import time
 from urllib.error import HTTPError
 import multiprocessing as mp
+import shutil
 
 
 # path = "BTC-JPY.csv"
@@ -121,6 +122,9 @@ class PreprocessingWorker():
         graphDataDir = f'./{storedDirName}/15MIN/graphData'
         if not os.path.exists(graphDataDir):
             os.mkdir(graphDataDir)
+        else: # if exists, remove old graph data
+            shutil.rmtree(graphDataDir)
+            os.mkdir(graphDataDir)
         if startDate != None and os.path.exists(storedFilePath):
             filteredFileNames = filter(lambda pair: pair[1] >= startDate, fileNames)
             # fetch old data
@@ -172,6 +176,9 @@ class PreprocessingWorker():
         storedFilePath = f'{storedDirName}/1HOUR/labeledData.csv'
         graphDataDir = f'./{storedDirName}/1HOUR/graphData'
         if not os.path.exists(graphDataDir):
+            os.mkdir(graphDataDir)
+        else: # if exists, remove old graph data
+            shutil.rmtree(graphDataDir)
             os.mkdir(graphDataDir)
         if startDate != None and os.path.exists(storedFilePath):
             # fetch old data
@@ -545,6 +552,7 @@ def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, reso
             graphData = pd.DataFrame(graphArray, columns=topDownArray, index=data1HOUR.loc[range(t_1hour+1-timeSpreadPast, t_1hour+1), 'Date'])
             graphName = data1HOUR_interpolated.loc[t_1hour_interpolated, 'Date'].split('.')[0].replace('T', '_').replace(':', '-')
             graphData.to_csv(f'./LabeledData/1HOUR/graphData/{graphName}.csv', index=True, header=True)
+            data1HOUR.loc[t_1hour, 'hasGraph'] = True
     # for t in ts:
     #     # if data down to -timeSpreadPast is not available, skip drawing graph.
     #     if not t+1-timeSpreadPast in data.index.values:

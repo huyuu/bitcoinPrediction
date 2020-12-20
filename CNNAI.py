@@ -38,8 +38,10 @@ class CNNAI():
         # get labeled span data
         path = f'{dirName}/{self.span}/labeledData.csv'
         data = pd.read_csv(path).dropna().reset_index(drop=True)
+        # first data don't have graphs
+        data = data.drop(data.index[:self.timeSpreadPast])
         # latest data is unstable, should be dropped.
-        data = data.drop(data.index[-self.timeSpreadPast:])
+        # data = data.drop(data.index[-self.timeSpreadPast:])
         data = data.reindex(nu.random.permutation(data.index))
         data = data.reset_index(drop=True)
         print('class probability:\n{}%'.format(data.groupby('LabelCNNPost1').size() / float(data.index.values.ravel().shape[0]) * 100))
