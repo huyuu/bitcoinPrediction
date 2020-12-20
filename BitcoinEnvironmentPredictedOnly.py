@@ -75,7 +75,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
                 for span in ['15MIN', '1HOUR']:
                     files = list(filter(lambda path: path.split('.')[1] == 'csv', os.listdir(f'./LabeledData/{span}/graphData')))
                     filesAndSpans.extend([ (file, span) for file in files ])
-                    self.graphData[f'{span}'] = pool.starmap(getGraphData, filesAndSpan)
+                    self.graphData[f'{span}'] = pool.starmap(getGraphData, filesAndSpans)
                     self.graphData[f'{span}'] = { name: graphData for name, graphData in self.graphData[f'{span}'] }
             # self.graphData = { path: pd.read_csv(f'./LabeledData/graphData/{path}', index_col=0).values for path in os.listdir('./LabeledData/graphData') if path.split('.')[1] == 'csv' }
         else:
