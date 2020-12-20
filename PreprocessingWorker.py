@@ -463,7 +463,7 @@ class PreprocessingWorker():
 
 
 
-def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, resolution, timeSpreadPast, timeSpreadFuture, pointsPerCandle=10, determinantPriceDiversityPercentage=0.05):
+def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, resolution, timeSpreadPast, timeSpreadFuture, pointsPerCandle=10, determinantPriceDiversityPercentage=0.02):
     # for t in data15MIN.index[timeSpreadPast+1: -timeSpreadFuture]:
     for t in data15MIN.index[1:]:
         currentClosePrice = data15MIN.loc[t, 'Close']
