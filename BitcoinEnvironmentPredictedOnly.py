@@ -54,12 +54,13 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         self.imageWidth = imageWidth
         self.imageHeight = imageHeight
 
-        self.data15MIN = pd.read_csv(f'./LabeledData/15MIN/labeledData.csv').dropna(axis=1)
-        self.data15MIN['DateTypeDate'] = stringToDate(self.data15MIN['Date'].values.ravel())
-        self.possibleStartDate = [ pd.Timestamp(nu_date).to_pydatetime() for nu_date in self.data15MIN.iloc[:-int(4*24*31*3), :].loc[:, 'DateTypeDate'].values.ravel() ]
+        self.data = {}
+        self.data['15MIN'] = pd.read_csv(f'./LabeledData/15MIN/labeledData.csv').dropna(axis=1)
+        self.data['15MIN']['DateTypeDate'] = stringToDate(self.data['15MIN']['Date'].values.ravel())
+        self.possibleStartDate = [ pd.Timestamp(nu_date).to_pydatetime() for nu_date in self.data['15MIN'].iloc[:-int(4*24*31*3), :].loc[:, 'DateTypeDate'].values.ravel() ]
         startDate = nu.random.choice(self.possibleStartDate)
         self.currentDate = dt.datetime(startDate.year, startDate.month, startDate.day, startDate.hour, (startDate.minute//15)*15, 0)
-
+        self.data['1HOUR'] = pd.read_csv(f'./LabeledData/1HOUR/labeledData.csv').dropna(axis=1)
 
         self.episodeCount = 0#
         self.episodeEndSteps = 1*7*24*4  # 1week * 7days/week * 24hours/day * 4quater/hour
@@ -68,16 +69,21 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
 
         self.isHugeMemorryMode = isHugeMemorryMode
         if isHugeMemorryMode:
+            self.graphData = {}
             with mp.Pool(processes=min(mp.cpu_count()-1, 8)) as pool:
-                files = list(filter(lambda path: path.split('.')[1] == 'csv', os.listdir(f'./LabeledData/{span}/graphData')))
-                filesAndSpan = [ (file, span) for file in files ]
-                self.graphData = pool.starmap(getGraphData, filesAndSpan)
-                self.graphData = { data[0]: data[1] for data in self.graphData }
+                filesAndSpans = []
+                for span in ['15MIN', '1HOUR']:
+                    files = list(filter(lambda path: path.split('.')[1] == 'csv', os.listdir(f'./LabeledData/{span}/graphData')))
+                    filesAndSpans.extend([ (file, span) for file in files ])
+                    self.graphData[f'{span}'] = pool.starmap(getGraphData, filesAndSpan)
+                    self.graphData[f'{span}'] = { name: graphData for name, graphData in self.graphData[f'{span}'] }
             # self.graphData = { path: pd.read_csv(f'./LabeledData/graphData/{path}', index_col=0).values for path in os.listdir('./LabeledData/graphData') if path.split('.')[1] == 'csv' }
         else:
             self.graphData = None
+
         self.shouldGiveRewardsFinally = shouldGiveRewardsFinally
         self.gamma = gamma
+
         # set cnnAIs
         self.cnnAIs = {}
         for span in ['15MIN', '1HOUR']:
@@ -85,11 +91,11 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             modelPath = f'cnnmodel{span}.h5'
             if os.path.exists(modelPath):
                 model = tf.keras.models.load_model(modelPath)
-                self.cnnAIs[span] = CNNAI(span=span, model=model)
+                self.cnnAIs[f'{span}'] = CNNAI(span=span, model=model)
             else:
                 print(f"{span} model not given, start training ...")
-                self.cnnAIs[span] = CNNAI(span=span, model=None)
-                self.cnnAIs[span].train()
+                self.cnnAIs[f'{span}'] = CNNAI(span=span, model=None)
+                self.cnnAIs[f'{span}'].train()
 
 
     # required
@@ -123,7 +129,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             # get next market snapshot
             if self.isHugeMemorryMode:
                 _graphPath = self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
-                marketSnapshot = self.graphData[f'{_graphPath}']
+                marketSnapshot = self.graphData[f'{span}'][f'{_graphPath}']
             else:
                 _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
                 marketSnapshot = pd.read_csv(_graphPath, index_col=0).values
@@ -153,31 +159,36 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
                 return ts.termination(self.currentState, 0)
         # if should continue trading
         self.episodeCount += 1
-        while True:
-            # get next time
+        # get next time
+        _didFindNextTime = False
+        while not _didFindNextTime:
             self.currentDate += dt.timedelta(minutes=15)
-            # get next data
-            nextData = self.data.loc[self.data['DateTypeDate']==self.currentDate, :]
-            if len(nextData['Open'].values.ravel()) != 0:
-                _graphPath = f'./LabeledData/{self.span}/graphData/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
-                if os.path.exists(_graphPath):
-                    break
-                else:
+            _didFindNextTime = True
+            for span in ['15MIN', '1HOUR']:
+                # get next data
+                nextData = self.data[f'{span}'].loc[self.data[f'{span}']['DateTypeDate']==self.currentDate, :]
+                if len(nextData['Open'].values.ravel()) == 0:
+                    _didFindNextTime = False
                     continue
-            else:
-                continue
+                # check if 15MIN span graph data exists
+                _graphPath = f'./LabeledData/{span}/graphData/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
+                if not os.path.exists(_graphPath):
+                    _didFindNextTime = False
         self.currentPrice = nextData['Open'].values.ravel()[0]
         nextClosePrice = nextData['Close'].values.ravel()[0]
+        newState = nu.array([], dtype=self.dtype)
         # get next market snapshot
-        _graphDir = f'./LabeledData/{self.span}/graphData'
-        if self.isHugeMemorryMode:
-            _graphPath = self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
-            nextMarketSnapshot = self.graphData[f'{_graphPath}']
-        else:
-            _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
-            nextMarketSnapshot = pd.read_csv(_graphPath, index_col=0).values
-        nextMarketSnapshot = nextMarketSnapshot.astype(self.dtype)
-        predictedProbabilities = self.cnnAI15MIN.predictFromCurrentGraphData(data=nextMarketSnapshot, now=self.currentDate, shouldSaveGraph=False)
+        for span in ['15MIN', '1HOUR']:
+            _graphDir = f'./LabeledData/{span}/graphData'
+            if self.isHugeMemorryMode:
+                _graphPath = self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
+                nextMarketSnapshot = self.graphData[f'{span}'][f'{_graphPath}']
+            else:
+                _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
+                nextMarketSnapshot = pd.read_csv(_graphPath, index_col=0).values
+            nextMarketSnapshot = nextMarketSnapshot.astype(self.dtype)
+            predictedProbabilities = self.cnnAIs[f'{span}'].predictFromCurrentGraphData(data=nextMarketSnapshot, now=self.currentDate, shouldSaveGraph=False)
+            newState = nu.concatenate([newState, predictedProbabilities.ravel()])
         # get next holding rate according to specific action taken
         # action[0] = percentage of selling(+) holdingJPY / selling(-) holdingBTC
         # action[1] = exchanging rate (relatively to current rate)
@@ -217,7 +228,8 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         #     'observation_predictedCategory': predictedCategory,
         #     'observation_holdingRate': nu.array([self.holdingRate], dtype=self.dtype)
         # }
-        self.currentState = nu.array([predictedProbabilities[0], predictedProbabilities[1], predictedProbabilities[2], self.holdingRate], dtype=self.dtype)
+        # self.currentState = nu.array([predictedProbabilities[0], predictedProbabilities[1], predictedProbabilities[2], self.holdingRate], dtype=self.dtype)
+        self.currentState = nu.append(newState, self.holdingRate)
         # returns
         if not self.shouldGiveRewardsFinally:
             assetAfterAction = nextClosePrice * self.holdingBTC + self.holdingJPY
