@@ -174,7 +174,7 @@ class PreprocessingWorker():
 
         # 1HOUR Data (normal)
         storedFilePath = f'{storedDirName}/1HOUR/labeledData.csv'
-        graphDataDir = f'./{storedDirName}/1HOUR/graphData'
+        graphDataDir = f'{storedDirName}/1HOUR/graphData'
         if not os.path.exists(graphDataDir):
             os.mkdir(graphDataDir)
         else: # if exists, remove old graph data
