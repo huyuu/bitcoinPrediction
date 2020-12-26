@@ -254,7 +254,6 @@ if __name__ == '__main__':
         max_length=replayBufferCapacity
     )
     print(tf_agent.collect_data_spec)
-    print('Replay Buffer Created, start warming-up ...')
     _startTime = dt.datetime.now()
 
 
@@ -268,6 +267,7 @@ if __name__ == '__main__':
     )
     # run restore process
     if shouldContinueFromLastCheckpoint:
+        print('Replay Buffer Created, start warming-up from previous savepoint ...')
         train_checkpointer = common.Checkpointer(
             ckpt_dir=checkpointDir,
             max_to_keep=1,
@@ -278,6 +278,7 @@ if __name__ == '__main__':
         )
         train_checkpointer.initialize_or_restore()
     else:
+        print('Replay Buffer Created, start warming-up from initial ...')
         initial_collect_driver.run()
     _timeCost = (dt.datetime.now() - _startTime).total_seconds()
     print('Replay Buffer Warm-up Done. (cost {:.3g} hours)'.format(_timeCost/3600.0))
