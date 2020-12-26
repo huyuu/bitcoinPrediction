@@ -127,7 +127,6 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
                 # check if 15MIN/1HOUR span graph data exists
                 _graphPath = f'./LabeledData/{span}/graphData/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
                 if not os.path.exists(_graphPath):
-                    print(f'{span}Data does not have {self.currentDate} in graphData')
                     _didFindNextTime = False
         # set current price and holding rate
         self.currentPrice = self.data['15MIN'].loc[self.data['15MIN']['DateTypeDate']==self.currentDate, 'Close'].values[0]
@@ -174,20 +173,17 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         _didFindNextTime = False
         while not _didFindNextTime:
             self.currentDate += dt.timedelta(minutes=15)
-            print(f'try currentDate = {self.currentDate}')
             _didFindNextTime = True
             for span in ['15MIN', '1HOUR']:
                 interpolated_span = f'{span}_interpolated' if span != '15MIN' else span
                 # get next data
                 nextData = self.data[interpolated_span].loc[self.data[interpolated_span]['DateTypeDate']==self.currentDate, :]
                 if len(nextData['Open'].values.ravel()) == 0:
-                    print(f'{interpolated_span}Data does not have {self.currentDate} in labeledData_interpolated')
                     _didFindNextTime = False
                     continue
                 # check if 15MIN span graph data exists
                 _graphPath = f'./LabeledData/{span}/graphData/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
                 if not os.path.exists(_graphPath):
-                    print(f'{span}Data does not have {self.currentDate} in graphData')
                     _didFindNextTime = False
         self.currentPrice = nextData['Open'].values.ravel()[0]
         nextClosePrice = nextData['Close'].values.ravel()[0]
