@@ -235,10 +235,10 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             assetAfterAction = nextClosePrice * self.holdingBTC + self.holdingJPY
             deltaAsset = assetAfterAction - assetBeforeAction
             _stepReward = deltaAsset/(self.rewardClipCoeff*self.initialAsset)
-            # print('steps: {:>4}; state: down: {:+4.2f}, level: {:+4.2f}, up: {:+4.2f}, holdingRate: {:.4f}; buy/sell amount of BTC: {:+5.2f}@rate: {:+5.2f}; BTC: {:.3f}, JPY: {:>8}, asset: {:>8}, reward: {:+6.3f}'.format(self.episodeCount, self.currentState[0], self.currentState[1], self.currentState[2], self.currentState[3], action[0], action[1], self.holdingBTC, self.holdingJPY, self.currentPrice*self.holdingBTC+self.holdingJPY, _stepReward))
+            print('steps: {:>4}; state: down(15min): {:+4.2f}, level(15min): {:+4.2f}, up(15min): {:+4.2f}, down(1hour): {:+4.2f}, level(1hour): {:+4.2f}, up(1hour): {:+4.2f}, holdingRate: {:.4f}; buy/sell amount of BTC: {:+5.2f}@rate: {:+5.2f}; BTC: {:.3f}, JPY: {:>8}, asset: {:>8}, reward: {:+6.3f}'.format(self.episodeCount, self.currentState[0], self.currentState[1], self.currentState[2], self.currentState[3], self.currentState[4], self.currentState[5], self.currentState[6], action[0], action[1], self.holdingBTC, self.holdingJPY, self.currentPrice*self.holdingBTC+self.holdingJPY, _stepReward))
             return ts.transition(self.currentState, reward=_stepReward, discount=self.gamma)
         else:
-            # print('steps: {:>4}; state: down: {:+4.2f}, level: {:+4.2f}, up: {:+4.2f}, holdingRate: {:.4f}; buy/sell amount of BTC: {:+5.2f}@rate: {:+5.2f}; BTC: {:.3f}, JPY: {:>8}, asset: {:>8}'.format(self.episodeCount, self.currentState[0], self.currentState[1], self.currentState[2], self.currentState[3], action[0], action[1], self.holdingBTC, self.holdingJPY, self.currentPrice*self.holdingBTC+self.holdingJPY))
+            print('steps: {:>4}; state: down(15min): {:+4.2f}, level(15min): {:+4.2f}, up(15min): {:+4.2f}, down(1hour): {:+4.2f}, level(1hour): {:+4.2f}, up(1hour): {:+4.2f}, holdingRate: {:.4f}; buy/sell amount of BTC: {:+5.2f}@rate: {:+5.2f}; BTC: {:.3f}, JPY: {:>8}, asset: {:>8}'.format(self.episodeCount, self.currentState[0], self.currentState[1], self.currentState[2], self.currentState[3], self.currentState[4], self.currentState[5], self.currentState[6], action[0], action[1], self.holdingBTC, self.holdingJPY, self.currentPrice*self.holdingBTC+self.holdingJPY))
             return ts.transition(self.currentState, reward=0, discount=self.gamma)
 
 
