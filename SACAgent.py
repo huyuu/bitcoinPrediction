@@ -63,10 +63,10 @@ if __name__ == '__main__':
     # create environment and transfer it to Tensorflow version
     gamma = 0.999
     print('Creating environment ...')
-    env = BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=True, shouldGiveRewardsFinally=False, gamma=gamma)
+    env = BTC_JPY_Environment(imageWidth=int(24*8), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=True, shouldGiveRewardsFinally=True, gamma=gamma)
     episodeEndSteps = env.episodeEndSteps
     env = tf_py_environment.TFPyEnvironment(env)
-    evaluate_env = tf_py_environment.TFPyEnvironment(BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=False, shouldGiveRewardsFinally=False, gamma=gamma))
+    evaluate_env = tf_py_environment.TFPyEnvironment(BTC_JPY_Environment(imageWidth=int(24*8), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=False, shouldGiveRewardsFinally=True, gamma=gamma))
     observation_spec = env.observation_spec()
     action_spec = env.action_spec()
     print('Environment created.')
@@ -146,7 +146,7 @@ if __name__ == '__main__':
         },
         preprocessing_combiner=kr.layers.Concatenate(axis=-1),
         joint_fc_layer_params=critic_commonDenseLayerParams,
-        joint_activation_fn=tf.nn.relu,
+        joint_activation_fn=tf.nn.sigmoid,
         output_activation_fn=None,
         kernel_initializer=None,
         last_kernel_initializer=None,

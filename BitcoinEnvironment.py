@@ -27,14 +27,14 @@ from PreprocessingWorker import stringToDate, dateToString
 
 # Model
 
-def getGraphData(path, span='1HOUR'):
+def getGraphData(path, span='15MIN'):
     return (path, pd.read_csv(f'./LabeledData/{span}/graphData/{path}', index_col=0).values)
 
 
 class BTC_JPY_Environment(py_environment.PyEnvironment):
     def __init__(self, imageWidth, imageHeight, initialAsset, dtype=nu.float32, isHugeMemorryMode=True, shouldGiveRewardsFinally=True, gamma=0.99, span='1HOUR'):
         self.dtype = dtype
-        self.__actionSpec = BoundedArraySpec(shape=(2,), dtype=self.dtype, minimum=-1, maximum=1, name='action')
+        self.__actionSpec = BoundedArraySpec(shape=(1,), dtype=self.dtype, minimum=0, maximum=1, name='action')
         # https://www.tensorflow.org/agents/api_docs/python/tf_agents/environments/py_environment/PyEnvironment#observation_spec
         # https://www.tensorflow.org/agents/api_docs/python/tf_agents/typing/types/NestedArraySpec
         # self.__observationSpec = (BoundedArraySpec(shape=(imageWidth, imageHeight), dtype=self.dtype, minimum=0, maximum=1, name='observation_market'), BoundedArraySpec(shape=(1,), dtype=self.dtype, minimum=0, maximum=1, name='observation_holdingRate'))
@@ -47,19 +47,23 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         self.initialAsset = initialAsset
         self.holdingRate = 0.0
         self.currentState = (nu.zeros((imageWidth, imageHeight), dtype=self.dtype), nu.array([self.holdingRate], dtype=self.dtype))
-        self.currentPrice = 0.0
+        self.currentOpenPrice = 0.0
+        self.currentClosePrice = 0.0
 
         self.imageWidth = imageWidth
         self.imageHeight = imageHeight
 
+
+        # self.episodeEndSteps = 4*24*30*1
+        self.episodeEndSteps = 1*7*24*4  # 1week * 7days/week * 24hours/day * 4quater/hour
+
         self.data = pd.read_csv(f'./LabeledData/{span}/labeledData.csv').dropna(axis=1)
         self.data['DateTypeDate'] = stringToDate(self.data['Date'].values.ravel())
-        self.possibleStartDate = [ pd.Timestamp(nu_date).to_pydatetime() for nu_date in self.data.iloc[:-int(4*24*31*3), :].loc[:, 'DateTypeDate'].values.ravel() ]
+        self.possibleStartDate = [ pd.Timestamp(nu_date).to_pydatetime() for nu_date in self.data.iloc[:-int(self.episodeEndSteps*2), :].loc[:, 'DateTypeDate'].values.ravel() ]
         startDate = nu.random.choice(self.possibleStartDate)
         self.currentDate = dt.datetime(startDate.year, startDate.month, startDate.day, startDate.hour, (startDate.minute//15)*15, 0)
 
         self.episodeCount = 0
-        self.episodeEndSteps = 4*24*30*1
         # reward will be clipped to [-1, 1] using reward/(coeff*initAsset)
         self.rewardClipCoeff = 1.0
 
@@ -91,9 +95,8 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         self.holdingBTC = 0
         self.holdingJPY = self.initialAsset
         self.holdingRate = 0.0
-        self.currentPrice = 0.0
         # get available current date
-        _graphDir = './LabeledData/graphData'
+        _graphDir = './LabeledData/15MIN/graphData'
         while True:
             self.currentDate = nu.random.choice(self.possibleStartDate)
             _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
@@ -101,6 +104,9 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
                 break
             else:
                 continue
+        # get current prices
+        self.currentOpenPrice = self.data.loc[self.data['DateTypeDate']==self.currentDate, 'Open'].values[0]
+        self.currentClosePrice = self.data.loc[self.data['DateTypeDate']==self.currentDate, 'Close'].values[0]
         # get next market snapshot
         if self.isHugeMemorryMode:
             _graphPath = self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
@@ -123,7 +129,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
     def _step(self, action):
         if self.__checkIfEpisodeShouldEnd()  == True:
             if self.shouldGiveRewardsFinally:
-                reward = (self.currentPrice * self.holdingBTC + self.holdingJPY - self.initialAsset) / (self.rewardClipCoeff*self.initialAsset)
+                reward = (self.currentOpenPrice * self.holdingBTC + self.holdingJPY - self.initialAsset) / (self.rewardClipCoeff*self.initialAsset)
                 # print('Episode did ended with reward: {}'.format(reward))
                 return ts.termination(self.currentState, reward)
             else:
@@ -143,8 +149,8 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
                     continue
             else:
                 continue
-        self.currentPrice = nextData['Open'].values.ravel()[0]
-        nextClosePrice = nextData['Close'].values.ravel()[0]
+        self.currentOpenPrice = nextData['Open'].values.ravel()[0]
+        self.currentClosePrice = nextData['Close'].values.ravel()[0]
         # get next market snapshot
         _graphDir = './LabeledData/graphData'
         if self.isHugeMemorryMode:
@@ -154,35 +160,72 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             _graphPath = f'{_graphDir}/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
             nextMarketSnapshot = pd.read_csv(_graphPath, index_col=0).values
         nextMarketSnapshot = nextMarketSnapshot.astype(self.dtype)
-        # get next holding rate according to specific action taken
-        # action[0] = percentage of selling(+) holdingJPY / selling(-) holdingBTC
-        # action[1] = exchanging rate (relatively to current rate)
-        price = self.currentPrice * (1+action[1])
-        exchangeIndicator = action[0]
+        # # get next holding rate according to specific action taken
+        # # action[0] = percentage of selling(+) holdingJPY / selling(-) holdingBTC
+        # # action[1] = exchanging rate (relatively to current rate)
+        # price = self.currentOpenPrice * (1+action[1])
+        # exchangeIndicator = action[0]
+        # # store asset before action
+        # assetBeforeAction = self.currentOpenPrice * self.holdingBTC + self.holdingJPY
+        # # if should add some BTC
+        # if exchangeIndicator > 0:
+        #     # if have any JPY left
+        #     if self.holdingRate < 1:
+        #         costJPY = self.holdingJPY * exchangeIndicator
+        #         # if btc can be bought, update holdings; otherwise do nothing
+        #         if nextData['Low'].values[0] < price:
+        #             self.holdingBTC += costJPY / price
+        #             self.holdingJPY -= costJPY
+        #             self.holdingRate = self.holdingBTC*self.currentClosePrice / (self.holdingJPY + self.holdingBTC*self.currentClosePrice)
+        # # if should sell some BTC
+        # elif exchangeIndicator < 0:
+        #     # if have any BTC to be sold
+        #     if self.holdingRate > 0:
+        #         costBTCAmount = self.holdingBTC * (-exchangeIndicator)
+        #         # if btc can be sold, update holdings; otherwise do nothing
+        #         if price < nextData['High'].values[0]:
+        #             self.holdingBTC -= costBTCAmount
+        #             self.holdingJPY += costBTCAmount * price
+        #             self.holdingRate = self.holdingBTC*self.currentClosePrice / (self.holdingJPY + self.holdingBTC*self.currentClosePrice)
+        # else:
+        #     pass  # do nothing if deltaHoldingRate == 0
+
+
+        # translate actions to specific Coincheck API command
+        # action[0] = target holding rate
+        targetHoldingRate = action[0]
         # store asset before action
-        assetBeforeAction = self.currentPrice * self.holdingBTC + self.holdingJPY
+        assetBeforeAction = self.currentOpenPrice * self.holdingBTC + self.holdingJPY
         # if should add some BTC
-        if exchangeIndicator > 0:
+        if targetHoldingRate > self.holdingRate:
             # if have any JPY left
             if self.holdingRate < 1:
-                costJPY = self.holdingJPY * exchangeIndicator
+                addBTCAmount = (targetHoldingRate - self.holdingRate) * (self.holdingBTC + self.holdingJPY/self.currentOpenPrice)
+                # addBTCAmout = max(addBTCAmount, 0) # should above 0
+                addBTCAmount = min(self.holdingJPY/self.currentOpenPrice, addBTCAmount)
+                assert addBTCAmount >= 0, f'targetHoldingRate = {targetHoldingRate}, self.holdingRate = {self.holdingRate}, addBTCAmount = {addBTCAmount}, self.holdingJPY = {self.holdingJPY}, self.currentOpenPrice = {self.currentOpenPrice}'
                 # if btc can be bought, update holdings; otherwise do nothing
-                if nextData['Low'].values[0] < price:
-                    self.holdingBTC += costJPY / price
+                if currentData['Low'].values[0] <= self.currentOpenPrice:
+                    costJPY = addBTCAmount * self.currentOpenPrice
+                    self.holdingBTC += costJPY / self.currentOpenPrice
                     self.holdingJPY -= costJPY
-                    self.holdingRate = self.holdingBTC*nextClosePrice / (self.holdingJPY + self.holdingBTC*nextClosePrice)
+                    self.holdingRate = self.holdingBTC*self.currentClosePrice / (self.holdingJPY + self.holdingBTC*self.currentClosePrice)
         # if should sell some BTC
-        elif exchangeIndicator < 0:
+        elif targetHoldingRate < self.holdingRate:
             # if have any BTC to be sold
             if self.holdingRate > 0:
-                costBTCAmount = self.holdingBTC * (-exchangeIndicator)
+                sellBTCAmount = (self.holdingRate - targetHoldingRate) * (self.holdingBTC + self.holdingJPY/self.currentOpenPrice)
+                # sellBTCAmout = max(sellBTCAmount, 0) # should above 0
+                sellBTCAmount = min(self.holdingBTC, sellBTCAmount)
+                assert sellBTCAmount >= 0, f'targetHoldingRate = {targetHoldingRate}, self.holdingRate = {self.holdingRate}, sellBTCAmount = {sellBTCAmount}, self.holdingBTC = {self.holdingBTC}'
                 # if btc can be sold, update holdings; otherwise do nothing
-                if price < nextData['High'].values[0]:
-                    self.holdingBTC -= costBTCAmount
-                    self.holdingJPY += costBTCAmount * price
-                    self.holdingRate = self.holdingBTC*nextClosePrice / (self.holdingJPY + self.holdingBTC*nextClosePrice)
+                if self.currentOpenPrice < currentData['High'].values[0]:
+                    self.holdingBTC -= sellBTCAmount
+                    self.holdingJPY += sellBTCAmount * self.currentOpenPrice
+                    self.holdingRate = self.holdingBTC*self.currentClosePrice / (self.holdingJPY + self.holdingBTC*self.currentClosePrice)
         else:
-            pass  # do nothing if deltaHoldingRate == 0
+            pass  # do nothing if targetHoldingRate == self.holdingRate
+
 
         if self.holdingRate < 0 or self.holdingRate > 1:
             print(self.holdingRate)
@@ -195,18 +238,18 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         }
         # returns
         if not self.shouldGiveRewardsFinally:
-            assetAfterAction = nextClosePrice * self.holdingBTC + self.holdingJPY
+            assetAfterAction = self.currentClosePrice * self.holdingBTC + self.holdingJPY
             deltaAsset = assetAfterAction - assetBeforeAction
             _stepReward = deltaAsset/(self.rewardClipCoeff*self.initialAsset)
-            # print('steps: {:>4}, buy(+)/sell(-) amount of BTC: {:+6.3f}, exc. rate: {:+5.2f}, holdingRate: {:.4f}, BTC: {:.3f}, JPY: {:>8.1f}, asset: {:>8.1f}, reward: {:+10.7f}'.format(self.episodeCount, action[0], action[1], self.holdingRate, self.holdingBTC, self.holdingJPY, self.currentPrice*self.holdingBTC+self.holdingJPY, _stepReward))
+            # print('steps: {:>4}, buy(+)/sell(-) amount of BTC: {:+6.3f}, exc. rate: {:+5.2f}, holdingRate: {:.4f}, BTC: {:.3f}, JPY: {:>8.1f}, asset: {:>8.1f}, reward: {:+10.7f}'.format(self.episodeCount, action[0], action[1], self.holdingRate, self.holdingBTC, self.holdingJPY, self.currentOpenPrice*self.holdingBTC+self.holdingJPY, _stepReward))
             return ts.transition(self.currentState, reward=_stepReward, discount=self.gamma)
         else:
-            # print('steps: {:>4}, buy(+)/sell(-) amount of BTC: {:+6.3f}, exc. rate: {:+5.2f}, holdingRate: {:.4f}, BTC: {:.3f}, JPY: {:>8.1f}, asset: {:>8.1f}'.format(self.episodeCount, action[0], action[1], self.holdingRate, self.holdingBTC, self.holdingJPY, self.currentPrice*self.holdingBTC+self.holdingJPY))
+            # print('steps: {:>4}, buy(+)/sell(-) amount of BTC: {:+6.3f}, exc. rate: {:+5.2f}, holdingRate: {:.4f}, BTC: {:.3f}, JPY: {:>8.1f}, asset: {:>8.1f}'.format(self.episodeCount, action[0], action[1], self.holdingRate, self.holdingBTC, self.holdingJPY, self.currentOpenPrice*self.holdingBTC+self.holdingJPY))
             return ts.transition(self.currentState, reward=0, discount=self.gamma)
 
 
     def __checkIfEpisodeShouldEnd(self):
-        didBankrupted = (self.currentPrice * self.holdingBTC + self.holdingJPY) <= self.initialAsset * 0.2
+        didBankrupted = (self.currentClosePrice * self.holdingBTC + self.holdingJPY) <= self.initialAsset * 0.5
         return didBankrupted or self.episodeCount > self.episodeEndSteps
 
 
@@ -215,7 +258,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
 
 if __name__ == '__main__':
     startDate = dt.datetime(2018,  7, 15, 0, 0, 0)
-    env = BTC_JPY_Environment(imageWidth=int(24*4), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=False)
+    env = BTC_JPY_Environment(imageWidth=int(24*8), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=False)
 
     utils.validate_py_environment(env, episodes=3)
 
