@@ -32,7 +32,7 @@ def getGraphData(path, span='15MIN'):
 
 
 class BTC_JPY_Environment(py_environment.PyEnvironment):
-    def __init__(self, imageWidth, imageHeight, initialAsset, dtype=nu.float32, isHugeMemorryMode=True, shouldGiveRewardsFinally=True, gamma=0.99, span='1HOUR'):
+    def __init__(self, imageWidth, imageHeight, initialAsset, dtype=nu.float32, isHugeMemorryMode=True, shouldGiveRewardsFinally=True, gamma=0.99, span='15MIN'):
         self.dtype = dtype
         self.__actionSpec = BoundedArraySpec(shape=(1,), dtype=self.dtype, minimum=0, maximum=1, name='action')
         # https://www.tensorflow.org/agents/api_docs/python/tf_agents/environments/py_environment/PyEnvironment#observation_spec
