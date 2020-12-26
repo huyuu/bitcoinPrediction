@@ -101,11 +101,11 @@ if __name__ == '__main__':
     warmupEpisodes = 10
     validateEpisodes = 10
 
-    checkpointDir = './SACAgent_checkcpoints'
+    checkpointDir = './SACAgentPredictedOnly_checkcpoints'
     if not os.path.exists(checkpointDir):
         os.mkdir(checkpointDir)
 
-    policyDir = './SACAgent_savedPolicy'
+    policyDir = './SACAgentPredictedOnly_savedPolicy'
     if not os.path.exists(policyDir):
         os.mkdir(policyDir)
 
