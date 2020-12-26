@@ -241,8 +241,8 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         if targetHoldingRate > self.holdingRate:
             # if have any JPY left
             if self.holdingRate < 1:
-                addBTCAmount = targetHoldingRate * (self.holdingBTC + self.holdingJPY/self.currentOpenPrice) - self.holdingBTC
-                addBTCAmout = max(addBTCAmount, 0) # should above 0
+                addBTCAmount = (targetHoldingRate - self.holdingRate) * (self.holdingBTC + self.holdingJPY/self.currentOpenPrice)
+                # addBTCAmout = max(addBTCAmount, 0) # should above 0
                 addBTCAmount = min(self.holdingJPY/self.currentOpenPrice, addBTCAmount)
                 assert addBTCAmount >= 0, f'targetHoldingRate = {targetHoldingRate}, self.holdingRate = {self.holdingRate}, addBTCAmount = {addBTCAmount}, self.holdingJPY = {self.holdingJPY}, self.currentOpenPrice = {self.currentOpenPrice}'
                 # if btc can be bought, update holdings; otherwise do nothing
@@ -255,8 +255,8 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         elif targetHoldingRate < self.holdingRate:
             # if have any BTC to be sold
             if self.holdingRate > 0:
-                sellBTCAmount = self.holdingBTC - targetHoldingRate*(self.holdingBTC + self.holdingJPY/self.currentOpenPrice)
-                addBTCAmout = max(sellBTCAmount, 0) # should above 0
+                sellBTCAmount = (self.holdingRate - targetHoldingRate) * (self.holdingBTC + self.holdingJPY/self.currentOpenPrice)
+                # sellBTCAmout = max(sellBTCAmount, 0) # should above 0
                 sellBTCAmount = min(self.holdingBTC, sellBTCAmount)
                 assert sellBTCAmount >= 0, f'targetHoldingRate = {targetHoldingRate}, self.holdingRate = {self.holdingRate}, sellBTCAmount = {sellBTCAmount}, self.holdingBTC = {self.holdingBTC}'
                 # if btc can be sold, update holdings; otherwise do nothing
