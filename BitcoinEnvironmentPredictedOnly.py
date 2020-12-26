@@ -243,7 +243,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             if self.holdingRate < 1:
                 addBTCAmount = targetHoldingRate * (self.holdingBTC + self.holdingJPY/self.currentOpenPrice) - self.holdingBTC
                 addBTCAmount = min(self.holdingJPY/self.currentOpenPrice, addBTCAmount)
-                if addBTCAmount >= 0, f'addBTCAmount = {addBTCAmount}, self.holdingJPY = {self.holdingJPY}, self.currentOpenPrice = {self.currentOpenPrice}')
+                assert addBTCAmount >= 0, f'addBTCAmount = {addBTCAmount}, self.holdingJPY = {self.holdingJPY}, self.currentOpenPrice = {self.currentOpenPrice}')
                 # if btc can be bought, update holdings; otherwise do nothing
                 if currentData['Low'].values[0] <= self.currentOpenPrice:
                     costJPY = addBTCAmount * self.currentOpenPrice
