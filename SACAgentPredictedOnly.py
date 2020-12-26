@@ -97,7 +97,8 @@ if __name__ == '__main__':
     collect_episodes_per_iteration = 10
     _storeFullEpisodes = 200
     replayBufferCapacity = int(_storeFullEpisodes * episodeEndSteps * batchSize)
-    warmupEpisodes = _storeFullEpisodes
+    # warmupEpisodes = _storeFullEpisodes
+    warmupEpisodes = 10
     validateEpisodes = 10
 
     checkpointDir = './SACAgent_checkcpoints'

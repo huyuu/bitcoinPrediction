@@ -243,7 +243,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
 
 
     def __checkIfEpisodeShouldEnd(self):
-        didBankrupted = (self.currentPrice * self.holdingBTC + self.holdingJPY) <= self.initialAsset * 0.2
+        didBankrupted = (self.currentPrice * self.holdingBTC + self.holdingJPY) <= self.initialAsset * 0.5
         return didBankrupted or self.episodeCount > self.episodeEndSteps
 
 
