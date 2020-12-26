@@ -258,7 +258,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
                 sellBTCAmount = self.holdingBTC - targetHoldingRate*(self.holdingBTC + self.holdingJPY/self.currentOpenPrice)
                 addBTCAmout = max(sellBTCAmount, 0) # should above 0
                 sellBTCAmount = min(self.holdingBTC, sellBTCAmount)
-                assert sellBTCAmount >= 0, f'targetHoldingRate = {targetHoldingRate}, self.holdingRate = {self.holdingRate}, sellBTCAmount = {addBTCAmount}, self.holdingBTC = {self.holdingBTC}'
+                assert sellBTCAmount >= 0, f'targetHoldingRate = {targetHoldingRate}, self.holdingRate = {self.holdingRate}, sellBTCAmount = {sellBTCAmount}, self.holdingBTC = {self.holdingBTC}'
                 # if btc can be sold, update holdings; otherwise do nothing
                 if self.currentOpenPrice < currentData['High'].values[0]:
                     self.holdingBTC -= sellBTCAmount
