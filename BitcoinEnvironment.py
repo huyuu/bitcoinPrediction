@@ -140,8 +140,8 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             # get next time
             self.currentDate += dt.timedelta(minutes=15)
             # get next data
-            nextData = self.data.loc[self.data['DateTypeDate']==self.currentDate, :]
-            if len(nextData['Open'].values.ravel()) != 0:
+            currentData = self.data.loc[self.data['DateTypeDate']==self.currentDate, :]
+            if len(currentData['Open'].values.ravel()) != 0:
                 _graphPath = './LabeledData/15MIN/graphData/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
                 if os.path.exists(_graphPath):
                     break
@@ -149,8 +149,8 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
                     continue
             else:
                 continue
-        self.currentOpenPrice = nextData['Open'].values.ravel()[0]
-        self.currentClosePrice = nextData['Close'].values.ravel()[0]
+        self.currentOpenPrice = currentData['Open'].values.ravel()[0]
+        self.currentClosePrice = currentData['Close'].values.ravel()[0]
         # get next market snapshot
         _graphDir = './LabeledData/15MIN/graphData'
         if self.isHugeMemorryMode:
@@ -173,7 +173,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         #     if self.holdingRate < 1:
         #         costJPY = self.holdingJPY * exchangeIndicator
         #         # if btc can be bought, update holdings; otherwise do nothing
-        #         if nextData['Low'].values[0] < price:
+        #         if currentData['Low'].values[0] < price:
         #             self.holdingBTC += costJPY / price
         #             self.holdingJPY -= costJPY
         #             self.holdingRate = self.holdingBTC*self.currentClosePrice / (self.holdingJPY + self.holdingBTC*self.currentClosePrice)
@@ -183,7 +183,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         #     if self.holdingRate > 0:
         #         costBTCAmount = self.holdingBTC * (-exchangeIndicator)
         #         # if btc can be sold, update holdings; otherwise do nothing
-        #         if price < nextData['High'].values[0]:
+        #         if price < currentData['High'].values[0]:
         #             self.holdingBTC -= costBTCAmount
         #             self.holdingJPY += costBTCAmount * price
         #             self.holdingRate = self.holdingBTC*self.currentClosePrice / (self.holdingJPY + self.holdingBTC*self.currentClosePrice)
