@@ -142,7 +142,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             # get next data
             nextData = self.data.loc[self.data['DateTypeDate']==self.currentDate, :]
             if len(nextData['Open'].values.ravel()) != 0:
-                _graphPath = './LabeledData/graphData/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
+                _graphPath = './LabeledData/15MIN/graphData/' + self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
                 if os.path.exists(_graphPath):
                     break
                 else:
@@ -152,7 +152,7 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         self.currentOpenPrice = nextData['Open'].values.ravel()[0]
         self.currentClosePrice = nextData['Close'].values.ravel()[0]
         # get next market snapshot
-        _graphDir = './LabeledData/graphData'
+        _graphDir = './LabeledData/15MIN/graphData'
         if self.isHugeMemorryMode:
             _graphPath = self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
             nextMarketSnapshot = self.graphData[f'{_graphPath}']
