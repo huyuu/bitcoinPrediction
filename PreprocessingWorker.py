@@ -463,7 +463,7 @@ class PreprocessingWorker():
 
 
 
-def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, resolution, timeSpreadPast, timeSpreadFuture, pointsPerCandle=10, determinantPriceDiversityPercentage=0.005):
+def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, resolution, timeSpreadPast, timeSpreadFuture, pointsPerCandle=10, determinantPriceDiversityPercentage=0.001):
     data15MIN.loc[:, 'hasGraph'] = False
     data1HOUR.loc[:, 'hasGraph'] = False
     data1HOUR_interpolated.loc[:, 'hasGraph'] = False
