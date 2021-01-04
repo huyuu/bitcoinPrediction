@@ -63,10 +63,10 @@ if __name__ == '__main__':
     # create environment and transfer it to Tensorflow version
     gamma = 0.999
     print('Creating environment ...')
-    env = BTC_JPY_Environment(imageWidth=int(24*8), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=False, shouldGiveRewardsFinally=True, gamma=gamma)
+    env = BTC_JPY_Environment(imageWidth=int(24*8), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=False, shouldGiveRewardsFinally=False, gamma=gamma)
     episodeEndSteps = env.episodeEndSteps
     env = tf_py_environment.TFPyEnvironment(env)
-    evaluate_env = tf_py_environment.TFPyEnvironment(BTC_JPY_Environment(imageWidth=int(24*8), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=False, shouldGiveRewardsFinally=True, gamma=gamma))
+    evaluate_env = tf_py_environment.TFPyEnvironment(BTC_JPY_Environment(imageWidth=int(24*8), imageHeight=int(24*8), initialAsset=100000, isHugeMemorryMode=False, shouldGiveRewardsFinally=False, gamma=gamma))
     observation_spec = env.observation_spec()
     action_spec = env.action_spec()
     print('Environment created.')
