@@ -66,7 +66,7 @@ def listenMarketWithMinTimeSpan(queue, shouldStop):
     cnnai15MIN = CNNAI.initFromSavedModel(span='15MIN', resolution=int(24*8), timeSpreadPast=int(24*8))
     # cnnai1HOUR = CNNAI.initFromSavedModel(span='1HOUR', resolution=int(24*8), timeSpreadPast=int(24*8))
     worker = PreprocessingWorker(resolution=cnnai15MIN.resolution, timeSpreadPast=cnnai15MIN.timeSpreadPast)
-    worker.downloadAndUpdateHistoryDataToLatest(shouldCalculateLabelsFromBegining=False, shouldConductDownload=True)
+    # worker.downloadAndUpdateHistoryDataToLatest(shouldCalculateLabelsFromBegining=False, shouldConductDownload=True)
     data15MIN = pd.read_csv('LabeledData/15MIN/labeledData.csv')
     data15MIN['DateTypeDate'] = stringToDate(data15MIN['Date'].values.ravel())
     # start listening market
