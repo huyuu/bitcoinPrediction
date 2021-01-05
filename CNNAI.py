@@ -9,7 +9,7 @@ from matplotlib import pyplot as pl
 import datetime as dt
 import os
 from tensorflow import keras as kr
-from PreprocessingWorker import PreprocessingWorker, dateToString, stringToDate, generateLatestGraph
+from PreprocessingWorker import PreprocessingWorker, dateToString, stringToDate
 
 
 class CNNAI():
