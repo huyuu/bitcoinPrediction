@@ -63,17 +63,19 @@ class TradingAgent():
 def listenMarketWithMinTimeSpan(queue, shouldStop):
     # preprocessing
     client = bf.API()
-    ai = CNNAI()
-    worker = PreprocessingWorker(resolution=ai.resolution, timeSpreadPast=ai.timeSpreadPast)
-    data = worker.downloadAndUpdateHistoryDataToLatest(shouldCalculateLabelsFromBegining=False)
-    data['DateTypeDate'] = stringToDate(data['Date'].values.ravel())
+    cnnai15MIN = CNNAI.initFromSavedModel(span='15MIN', resolution=int(24*8), timeSpreadPast=int(24*8))
+    # cnnai1HOUR = CNNAI.initFromSavedModel(span='1HOUR', resolution=int(24*8), timeSpreadPast=int(24*8))
+    worker = PreprocessingWorker(resolution=cnnai15MIN.resolution, timeSpreadPast=cnnai15MIN.timeSpreadPast)
+    worker.downloadAndUpdateHistoryDataToLatest(shouldCalculateLabelsFromBegining=False, shouldConductDownload=True)
+    data15MIN = pd.read_csv('LabeledData/15MIN/labeledData.csv')
+    data15MIN['DateTypeDate'] = stringToDate(data15MIN['Date'].values.ravel())
     # start listening market
     print('Start listening at bitflyer market in 5 second span ...')
     while True:
         if shouldStop.is_set():
-            data = data.sort_values('DateTypeDate').reset_index(drop=True)
-            del data['DateTypeDate']
-            data.to_csv('./LabeledData/15MIN.csv', index=False, header=True)
+            data15MIN = data15MIN.sort_values('DateTypeDate').reset_index(drop=True)
+            del data15MIN['DateTypeDate']
+            data15MIN.to_csv('./LabeledData/15MIN/labeledData.csv', index=False, header=True)
             print('15MIN.csv updated.')
             return
         # update current time
@@ -93,13 +95,13 @@ def listenMarketWithMinTimeSpan(queue, shouldStop):
             # get current value
             currentValue = response['ltp']
             # search for response time region in data
-            rowIndex = data.loc[data['Date'] == responseTimeRegion].index
+            rowIndex = data15MIN.loc[data15MIN['Date'] == responseTimeRegion].index
             # if row exists, update; otherwise create one
             if rowIndex.values.shape[0] != 0:
-                data.loc[rowIndex, 'time_close'] = responseTimeString
-                data.loc[rowIndex, 'High'] = max(data.loc[rowIndex, 'High'].values[0], currentValue)
-                data.loc[rowIndex, 'Low'] = min(data.loc[rowIndex, 'Low'].values[0], currentValue)
-                data.loc[rowIndex, 'Close'] = currentValue
+                data15MIN.loc[rowIndex, 'time_close'] = responseTimeString
+                data15MIN.loc[rowIndex, 'High'] = max(data15MIN.loc[rowIndex, 'High'].values[0], currentValue)
+                data15MIN.loc[rowIndex, 'Low'] = min(data15MIN.loc[rowIndex, 'Low'].values[0], currentValue)
+                data15MIN.loc[rowIndex, 'Close'] = currentValue
             else:
                 # translate response to newData
                 newData = {
@@ -113,13 +115,13 @@ def listenMarketWithMinTimeSpan(queue, shouldStop):
                     'Close': currentValue,
                     'DateTypeDate': dt.datetime(responseTime.year, responseTime.month, responseTime.day, responseTime.hour, _minute, 0)
                 }
-                data = data.append(newData, ignore_index=True)
+                data15MIN = data15MIN.append(newData, ignore_index=True)
             # predict
-            ai.predictFromCurrentData(data, responseTime, shouldSaveGraph=True, graphDataDir='./LabeledData/graphData')
+            cnnai15MIN.predictFromCurrentData(data15MIN, responseTime, shouldSaveGraph=False, graphDataDir='./LabeledData/15MIN/graphData')
             # save every time
             if now.minute < 1:
-                data = data.sort_values('DateTypeDate').reset_index(drop=True)
-                data.to_csv('./LabeledData/15MIN.csv', columns=['Date', 'time_period_end', 'time_open', 'time_close', 'Open', 'High', 'Low', 'Close', 'LabelCNNPost1'], index=False, header=True)
+                data15MIN = data15MIN.sort_values('DateTypeDate').reset_index(drop=True)
+                data15MIN.to_csv('./LabeledData/15MIN/labeledData.csv', columns=['Date', 'time_period_end', 'time_open', 'time_close', 'Open', 'High', 'Low', 'Close', 'LabelCNNPost1', 'hasGraph'], index=False, header=True)
             # queue.put(response)
             time.sleep(1)
         else:

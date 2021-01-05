@@ -566,6 +566,78 @@ def generateGraphDataAndLabel(data15MIN, data1HOUR, data1HOUR_interpolated, reso
     return
 
 
+# def generateLatestGraph(data15MIN, data1HOUR, data1HOUR_interpolated, resolution, timeSpreadPast, timeSpreadFuture, pointsPerCandle=10, determinantPriceDiversityPercentage=0.001):
+#     t = data15MIN.tail().index.values[0]
+#     # if some middle data are missing, break.
+#     if data15MIN.loc[t, 'DateTypeDate'] - data15MIN.loc[t-timeSpreadPast, 'DateTypeDate'] >= dt.timedelta(minutes=(timeSpreadPast*15)):
+#         # print(data.loc[t-self.timeSpreadPast, 'DateTypeDate'])
+#         # print(data.loc[t-self.timeSpreadPast, 'DateTypeDate'] + dt.timedelta(minutes=(self.timeSpreadPast*15)))
+#         # print(data.loc[t, 'DateTypeDate'])
+#         print(f'Some data15MIN are missing, skip prediction.')
+#         print(data15MIN[['Date', 'time_close', 'Close', 'DateTypeDate']].tail())
+#         return
+#     if data1HOUR.loc[t, 'DateTypeDate'] - data1HOUR.loc[t-timeSpreadPast, 'DateTypeDate'] >= dt.timedelta(hours=timeSpreadPast):
+#         # print(data.loc[t-self.timeSpreadPast, 'DateTypeDate'])
+#         # print(data.loc[t-self.timeSpreadPast, 'DateTypeDate'] + dt.timedelta(minutes=(self.timeSpreadPast*15)))
+#         # print(data.loc[t, 'DateTypeDate'])
+#         print(f'Some data1HOUR are missing, skip prediction.')
+#         print(data1HOUR[['Date', 'time_close', 'Close', 'DateTypeDate']].tail())
+#         return
+#
+#     currentClosePrice = data15MIN.loc[t, 'Close']
+#     currentTime = data15MIN.loc[t, 'DateTypeDate']
+#     # decide price of growing and dropping
+#     determinantPriceOfGrowing = currentClosePrice * (1 + determinantPriceDiversityPercentage)
+#     determinantPriceOfDropping = currentClosePrice * (1 - determinantPriceDiversityPercentage)
+#     # draw past graph from now-timeSpreadPast+1 to now
+#     if t+1-timeSpreadPast in data15MIN.index.values:
+#         targetIndices = range(t+1-timeSpreadPast, t+1)
+#         top = data15MIN.loc[targetIndices, 'High'].max()
+#         down = data15MIN.loc[targetIndices, 'Low'].min()
+#         topDownArray = nu.linspace(down, top, resolution)
+#         graphArray = nu.zeros((timeSpreadPast, resolution), dtype=nu.int)
+#         for i, _t in enumerate(targetIndices):
+#             lowerBound = data15MIN.loc[_t, 'Low']
+#             upperBound = data15MIN.loc[_t, 'High']
+#             graphArray[i, :] = nu.array([ True if lowerBound <= value <= upperBound else False for value in topDownArray ]) * 1
+#         graphData15MIN = pd.DataFrame(graphArray, columns=topDownArray, index=data15MIN.loc[targetIndices, 'Date'])
+#         graphName = data15MIN.loc[t, 'Date'].split('.')[0].replace('T', '_').replace(':', '-')
+#         graphData15MIN.to_csv(f'./LabeledData/15MIN/graphData/{graphName}.csv', index=True, header=True)
+#         data15MIN.loc[t, 'hasGraph'] = True
+#
+#     # label 1HOURData
+#     # get future average price from now to now+timeSpreadFuture_1hour
+#     currentHourRoundedTime = dt.datetime(currentTime.year, currentTime.month, currentTime.day, currentTime.hour, 0, 0)
+#     # try:
+#     t_1hour = data1HOUR.loc[data1HOUR['DateTypeDate'] == currentHourRoundedTime].index[0]
+#     t_1hour_interpolated = data1HOUR_interpolated.loc[data1HOUR_interpolated['DateTypeDate'] == currentTime].index[0]
+#     # draw past graph from now-timeSpreadPast+1 to now
+#     if t_1hour+1-timeSpreadPast in data1HOUR.index.values:
+#         targetIndicesInFull1HOURData = range(t_1hour+1-timeSpreadPast, t_1hour)
+#         top = data1HOUR.loc[targetIndicesInFull1HOURData, 'High'].max()
+#         top = max(top, data1HOUR_interpolated.loc[t_1hour_interpolated, 'High'])
+#         down = data1HOUR.loc[targetIndicesInFull1HOURData, 'Low'].min()
+#         down = min(down, data1HOUR_interpolated.loc[t_1hour_interpolated, 'Low'])
+#         topDownArray = nu.linspace(down, top, resolution)
+#         graphArray = nu.zeros((timeSpreadPast, resolution), dtype=nu.int)
+#         # create full 1 hour history data graph (t_1hour+1-timeSpreadPast ~ t_1hour) from data1HOUR
+#         for i, _t in enumerate(targetIndicesInFull1HOURData):
+#             _lowerBound = data1HOUR.loc[_t, 'Low']
+#             _upperBound = data1HOUR.loc[_t, 'High']
+#             graphArray[i, :] = nu.array([ True if _lowerBound <= value <= _upperBound else False for value in topDownArray ]) * 1
+#         # create 1 hour data interpolated
+#         _lowerBound = data1HOUR_interpolated.loc[t_1hour_interpolated, 'Low']
+#         _upperBound = data1HOUR_interpolated.loc[t_1hour_interpolated, 'High']
+#         graphArray[-1, :] = nu.array([ True if _lowerBound <= value <= _upperBound else False for value in topDownArray ]) * 1
+#         # save
+#         graphData1HOUR = pd.DataFrame(graphArray, columns=topDownArray, index=data1HOUR.loc[range(t_1hour+1-timeSpreadPast, t_1hour+1), 'Date'])
+#         graphName = data1HOUR_interpolated.loc[t_1hour_interpolated, 'Date'].split('.')[0].replace('T', '_').replace(':', '-')
+#         graphData1HOUR.to_csv(f'./LabeledData/1HOUR/graphData/{graphName}.csv', index=True, header=True)
+#         data1HOUR.loc[t_1hour, 'hasGraph'] = True
+#         data1HOUR_interpolated.loc[t_1hour_interpolated, 'hasGraph'] = True
+#     return graphData15MIN, graphData1HOUR
+
+
 def dateToString(date):
     return date.strftime('%Y-%m-%d') + 'T' + date.strftime('%H:%M:%S') + '.0000000Z'
 

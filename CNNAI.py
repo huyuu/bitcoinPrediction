@@ -9,13 +9,13 @@ from matplotlib import pyplot as pl
 import datetime as dt
 import os
 from tensorflow import keras as kr
-from PreprocessingWorker import PreprocessingWorker, dateToString, stringToDate
+from PreprocessingWorker import PreprocessingWorker, dateToString, stringToDate, generateLatestGraph
 
 
 class CNNAI():
-    def __init__(self, span, model=None):
-        self.resolution = int(24*8)
-        self.timeSpreadPast = int(24*8)
+    def __init__(self, span, resolution, timeSpreadPast, model=None):
+        self.resolution = resolution
+        self.timeSpreadPast = timeSpreadPast
         self.span = span
         self.modelPath = f"cnnmodel{span}.h5"
         if model is None:
@@ -24,6 +24,17 @@ class CNNAI():
         else:
             self.model = model
             self.isModelLoaded = True
+
+
+    @classmethod
+    def initFromSavedModel(cls, span, , resolution, timeSpreadPast):
+        modelPath = f"cnnmodel{span}.h5"
+        if os.path.exists(modelPath):
+            model = keras.models.load_model(modelPath)
+            ai = cls(span=span, resolution=resolution, timeSpreadPast=timeSpreadPast, model=model)
+        else:
+            ai = cls(span=span, resolution=resolution, timeSpreadPast=timeSpreadPast, model=None)
+        return ai
 
 
 

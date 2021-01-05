@@ -97,10 +97,10 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
             modelPath = f'cnnmodel{span}.h5'
             if os.path.exists(modelPath):
                 model = tf.keras.models.load_model(modelPath)
-                self.cnnAIs[f'{span}'] = CNNAI(span=span, model=model)
+                self.cnnAIs[f'{span}'] = CNNAI(span=span, resolution=imageWidth, timeSpreadPast=imageHeight, model=model)
             else:
                 print(f"{span} model not given, start training ...")
-                self.cnnAIs[f'{span}'] = CNNAI(span=span, model=None)
+                self.cnnAIs[f'{span}'] = CNNAI(span=span, resolution=imageWidth, timeSpreadPast=imageHeight, model=None)
                 self.cnnAIs[f'{span}'].train()
 
 
