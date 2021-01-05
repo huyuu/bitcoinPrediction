@@ -27,7 +27,7 @@ class CNNAI():
 
 
     @classmethod
-    def initFromSavedModel(cls, span, , resolution, timeSpreadPast):
+    def initFromSavedModel(cls, span, resolution, timeSpreadPast):
         modelPath = f"cnnmodel{span}.h5"
         if os.path.exists(modelPath):
             model = keras.models.load_model(modelPath)
