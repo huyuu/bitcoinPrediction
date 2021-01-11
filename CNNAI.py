@@ -163,12 +163,12 @@ class CNNAI():
         graphData = pd.DataFrame(graphArray, index=data.loc[targetIndices, 'Date'])
         graphName = data.loc[t, 'Date'].split('.')[0].replace('T', '_').replace(':', '-')
         prediction = self.model.predict(graphArray.reshape(1, self.timeSpreadPast, self.resolution, 1))[0]
+        terms = ['-', '=', '+']
+        print('@UTC {} Prediction: {} (-:{:.3g}%, =:{:.3g}%, +:{:.3g}%)'.format(now.strftime('%Y-%m-%d %H:%M:%S'), terms[nu.argmax(prediction)], prediction[0]*100, prediction[1]*100, prediction[2]*100))
         # save graph
         if shouldSaveGraph:
             assert graphDataDir != None
             graphData.to_csv(f'{graphDataDir}/{graphName}.csv', index=True, header=True)
-            terms = ['+', '=', '-']
-            print('@UTC {} Prediction: {} (+:{:.3g}%, =:{:.3g}%, -:{:.3g}%)'.format(now.strftime('%Y-%m-%d %H:%M:%S'), terms[nu.argmax(prediction)], prediction[0]*100, prediction[1]*100, prediction[2]*100))
             fig = pl.figure()
             pl.title('@{} {} (+:{:.3g}%, =:{:.3g}%, -:{:.3g}%)'.format(now.strftime('%Y-%m-%d %H:%M:%S'), terms[nu.argmax(prediction)], prediction[0]*100, prediction[1]*100, prediction[2]*100), fontsize=24)
             pl.xlabel('Date', fontsize=22)
