@@ -154,7 +154,7 @@ if __name__ == '__main__':
     # )
     critic_net = critic_network.CriticNetwork(
         (observation_spec, action_spec),
-        observation_fc_layer_params=[4, 4],
+        observation_fc_layer_params=[20, 20],
         action_fc_layer_params=[2],
         joint_fc_layer_params=[2, 2],
         kernel_initializer='glorot_uniform',
@@ -196,7 +196,7 @@ if __name__ == '__main__':
     actor_net = actor_distribution_network.ActorDistributionNetwork(
         observation_spec,
         action_spec,
-        fc_layer_params=[4, 4],
+        fc_layer_params=[20, 20],
         continuous_projection_net=(
         tanh_normal_projection_network.TanhNormalProjectionNetwork)
     )

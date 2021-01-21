@@ -170,7 +170,7 @@ class CNNAI():
             assert graphDataDir != None
             graphData.to_csv(f'{graphDataDir}/{graphName}.csv', index=True, header=True)
             fig = pl.figure()
-            pl.title('@{} {} (+:{:.3g}%, =:{:.3g}%, -:{:.3g}%)'.format(now.strftime('%Y-%m-%d %H:%M:%S'), terms[nu.argmax(prediction)], prediction[0]*100, prediction[1]*100, prediction[2]*100), fontsize=24)
+            pl.title('@{} {} (-:{:.3g}%, =:{:.3g}%, +:{:.3g}%)'.format(now.strftime('%Y-%m-%d %H:%M:%S'), terms[nu.argmax(prediction)], prediction[0]*100, prediction[1]*100, prediction[2]*100), fontsize=24)
             pl.xlabel('Date', fontsize=22)
             pl.ylabel('Value', fontsize=22)
             pl.imshow(nu.rot90(graphArray), cmap = 'gray')
