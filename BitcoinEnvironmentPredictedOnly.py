@@ -43,15 +43,16 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         #     'observation_predictedCategory': BoundedArraySpec(shape=(1,), dtype=self.dtype, minimum=-1, maximum=1, name='observation_predictedCategory'),
         #     'observation_holdingRate': BoundedArraySpec(shape=(1,), dtype=self.dtype, minimum=0, maximum=1, name='observation_holdingRate')
         # }
-        self.savedElements = int(3*4*48) # 3elements * 4quaterPerHour * 48Hour
-        self.__observationSpec = BoundedArraySpec(shape=(self.savedElements+1,), dtype=self.dtype, minimum=0, maximum=1, name='observation')
+        # self.savedElements = int(3*4*48) # 3elements * 4quaterPerHour * 48Hour
+        # self.__observationSpec = BoundedArraySpec(shape=(self.savedElements+1,), dtype=self.dtype, minimum=0, maximum=1, name='observation')
+        self.__observationSpec = BoundedArraySpec(shape=(7,), dtype=self.dtype, minimum=0, maximum=1, name='observation')
         self.holdingBTC = 0.0
         self.holdingJPY = float(initialAsset)
         self.initialAsset = float(initialAsset)
         self.holdingRate = 0.0
         # self.currentState = (nu.zeros((imageWidth, imageHeight), dtype=self.dtype), nu.array([self.holdingRate], dtype=self.dtype))
 
-        self.currentState = nu.zeros(self.savedElements+1, dtype=self.dtype)
+        self.currentState = nu.zeros(7, dtype=self.dtype)
         self.currentOpenPrice = 0.0
         self.currentClosePrice = 0.0
 
@@ -136,8 +137,8 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         self.currentClosePrice = self.data['15MIN'].loc[self.data['15MIN']['DateTypeDate']==self.currentDate, 'Close'].values[0]
         self.holdingRate = 0.0
         # loop in spans
-        # self.currentState = nu.array([], dtype=self.dtype)
-        self.currentState = nu.zeros(self.savedElements, dtype=self.dtype)
+        self.currentState = nu.array([], dtype=self.dtype)
+        # self.currentState = nu.zeros(self.savedElements, dtype=self.dtype)
         for span in ['15MIN', '1HOUR']:
             # get next market snapshot
             if self.isHugeMemorryMode:
@@ -148,11 +149,11 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
                 marketSnapshot = pd.read_csv(_graphPath, index_col=0).values
             marketSnapshot = marketSnapshot.astype(self.dtype)
             predictedProbabilities = self.cnnAIs[span].predictFromCurrentGraphData(data=marketSnapshot, now=self.currentDate, shouldSaveGraph=False)
-            # for _probability in predictedProbabilities.ravel():
-            #     self.currentState = nu.append(self.currentState, _probability)
+            for _probability in predictedProbabilities.ravel():
+                self.currentState = nu.append(self.currentState, _probability)
 
             # self.currentState = nu.concatenate([self.currentState, predictedProbabilities.ravel()])
-            self.currentState[-3:] = predictedProbabilities.ravel()
+            # self.currentState[-3:] = predictedProbabilities.ravel()
         # self.currentState = nu.append(marketSnapshot, self.holdingRate)
         # self.currentState = (marketSnapshot, nu.array([self.holdingRate], dtype=self.dtype))
         # self.currentState = {
@@ -194,11 +195,11 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
                     _didFindNextTime = False
         self.currentOpenPrice = currentData['Open'].values.ravel()[0]
         self.currentClosePrice = currentData['Close'].values.ravel()[0]
-        # newState = nu.array([], dtype=self.dtype)
-        newState = nu.roll(self.currentState, -3)
+        newState = nu.array([], dtype=self.dtype)
+        # newState = nu.roll(self.currentState, -3)
         # get next market snapshot
-        # for span in ['15MIN', '1HOUR']:
-        for span in ['15MIN']:
+        for span in ['15MIN', '1HOUR']:
+        # for span in ['15MIN']:
             _graphDir = f'./LabeledData/{span}/graphData'
             if self.isHugeMemorryMode:
                 _graphPath = self.currentDate.strftime('%Y-%m-%d_%H-%M-%S') + '.csv'
@@ -208,8 +209,8 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
                 nextMarketSnapshot = pd.read_csv(_graphPath, index_col=0).values
             nextMarketSnapshot = nextMarketSnapshot.astype(self.dtype)
             predictedProbabilities = self.cnnAIs[f'{span}'].predictFromCurrentGraphData(data=nextMarketSnapshot, now=self.currentDate, shouldSaveGraph=False)
-            # newState = nu.concatenate([newState, predictedProbabilities.ravel()])
-            newState[-4:-1] = predictedProbabilities.ravel()
+            newState = nu.concatenate([newState, predictedProbabilities.ravel()])
+            # newState[-4:-1] = predictedProbabilities.ravel()
         # # get next holding rate according to specific action taken
         # # action[0] = percentage of selling(+) holdingJPY / selling(-) holdingBTC
         # # action[1] = exchanging rate (relatively to current rate)
@@ -286,9 +287,9 @@ class BTC_JPY_Environment(py_environment.PyEnvironment):
         # }
         # self.currentState = nu.array([predictedProbabilities[0], predictedProbabilities[1], predictedProbabilities[2], self.holdingRate], dtype=self.dtype)
 
-        # self.currentState = nu.append(newState, self.holdingRate).astype(self.dtype)
-        newState[-1] = self.holdingRate
-        self.currentState = newState.copy().astype(self.dtype)
+        self.currentState = nu.append(newState, self.holdingRate).astype(self.dtype)
+        # newState[-1] = self.holdingRate
+        # self.currentState = newState.copy().astype(self.dtype)
         # returns
         if not self.shouldGiveRewardsFinally:
             assetAfterAction = self.currentClosePrice * self.holdingBTC + self.holdingJPY
